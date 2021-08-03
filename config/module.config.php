@@ -2,12 +2,30 @@
 namespace JDC;
 
 return [
-    'entity_manager' => [
-        'mapping_classes_paths' => [
-            dirname(__DIR__) . '/src/Entity',
+
+    'view_helpers' => [
+        
+        'invokables' => [
+            'JDCViewHelper' => View\Helper\JDCViewHelper::class,
+        ],                
+        'factories'  => [
+            'JDCFactory' => Service\ViewHelper\JDCFactory::class,
         ],
-        'proxy_paths' => [
-            dirname(__DIR__) . '/data/doctrine-proxies',
+
+    ],
+    'view_manager' => [
+        'template_path_stack' => [
+            dirname(__DIR__) . '/view',
+        ],
+    ],    
+    'block_layouts' => [
+        'invokables' => [
+            'JDC' => Site\BlockLayout\JDC::class,
+        ],
+    ],
+    'form_elements' => [
+        'factories' => [
+            Form\ConfigForm::class => Service\Form\ConfigFormFactory::class,
         ],
     ],
     'translator' => [
@@ -20,4 +38,16 @@ return [
             ],
         ],
     ],
+    'JDC' => [
+        'block_settings' => [
+            'JDC' => [
+                'heading' => 'Titre du jardin',
+            ],
+        ],
+    ],
+    'config' => [
+        'heading' => 'Titre du jardin',
+    ],
+
+
 ];

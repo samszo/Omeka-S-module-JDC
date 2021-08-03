@@ -1,4 +1,13 @@
 <?php
+/**
+ * JDC
+ *
+ * Module pour jardiner des connaissances
+ *
+ * @copyright Samuel Szoniecky, 2021
+
+ */
+
 namespace JDC;
 
 if (!class_exists(\Generic\AbstractModule::class)) {
@@ -8,17 +17,34 @@ if (!class_exists(\Generic\AbstractModule::class)) {
 }
 
 use Generic\AbstractModule;
+use Laminas\EventManager\Event;
+use Laminas\EventManager\SharedEventManagerInterface;
+use Laminas\ServiceManager\ServiceLocatorInterface;
+use Laminas\View\Renderer\PhpRenderer;
+use Laminas\Mvc\Controller\AbstractController;
+use JDC\Form\ConfigForm;
 
-use Zend\EventManager\Event;
-use Zend\EventManager\SharedEventManagerInterface;
-use Zend\ServiceManager\ServiceLocatorInterface;
 
 class Module extends AbstractModule
 {
     const NAMESPACE = __NAMESPACE__;
 
-    protected function preInstall()
+    var $rsVocabularies = [
+        ['prefix'=>'jdc','label'=>'Jardin des connaissances']
+    ];
+
+    var $rsRessourceTemplate = [
+        'Matière extensive'
+        ,'Actant'
+        ,'Concept'
+        ,'Rapport'
+    ];
+
+
+
+    protected function preInstall():void
     {
+        //vérifie les dépendances
         $services = $this->getServiceLocator();
         $module = $services->get('Omeka\ModuleManager')->getModule('Generic');
         if ($module && version_compare($module->getIni('version'), '3.0.18', '<')) {
@@ -31,7 +57,7 @@ class Module extends AbstractModule
         }
     }
 
-    protected function postUninstall()
+    protected function postUninstall():void
     {
         $services = $this->getServiceLocator();
 
@@ -45,26 +71,19 @@ class Module extends AbstractModule
         $installResources = $installResources();
 
         if (!empty($_POST['remove-vocabulary'])) {
-            $prefix = 'cito';
-            $installResources->removeVocabulary($prefix);
-            $prefix = 'skos';
-            $installResources->removeVocabulary($prefix);
-            $prefix = 'oa';
-            $installResources->removeVocabulary($prefix);
-            $prefix = 'schema';
-            $installResources->removeVocabulary($prefix);
-            $prefix = 'rdf';
-            $installResources->removeVocabulary($prefix);
-            $prefix = 'jdc';
-            $installResources->removeVocabulary($prefix);
+            foreach ($this->rsVocabularies as $v) {
+                $installResources->removeVocabulary($v['prefix']);
+            }
         }
-
 
         if (!empty($_POST['remove-template'])) {
-            $resourceTemplate = 'Actant';
-            $installResources->removeResourceTemplate($resourceTemplate);            
+            foreach ($this->rsRessourceTemplate as $r) {
+                $installResources->removeResourceTemplate($r);
+            }            
         }
+
     }
+
 
     public function warnUninstall(Event $event)
     {
@@ -77,8 +96,16 @@ class Module extends AbstractModule
         $serviceLocator = $this->getServiceLocator();
         $t = $serviceLocator->get('MvcTranslator');
 
-        $vocabularyLabels = 'Citation Typing Ontology" / "Schema" / "SKOS" / "Web Annotation Ontology" / "The RDF Concepts Vocabulary (RDF)" / "Jardin des connaissances"';
-        $resourceTemplates = 'Actant';
+        $vocabularyLabels = '';
+        foreach ($this->rsVocabularies as $v) {
+            $vocabularyLabels .= $v['label'].' / ';
+        }
+
+        $resourceTemplates = '';
+        foreach ($this->rsRessourceTemplate as $r) {
+            $resourceTemplates .= $r["o:label"].' / ';
+        }            
+
 
         $html = '<p>';
         $html .= '<strong>';
@@ -87,23 +114,23 @@ class Module extends AbstractModule
         $html .= '</p>';
 
         $html .= '<p>';
-        $html .= sprintf(
-            $t->translate('If checked, the values of the vocabularies "%s" will be removed too. The class of the resources that use a class of these vocabularies will be reset.'), // @translate
-            $vocabularyLabels
-        );
+        $html .= $t->translate('If checked, the values of the vocabularies will be removed too. The class of the resources that use a class of these vocabularies will be reset.'); // @translate
         $html .= '</p>';
         $html .= '<label><input name="remove-vocabulary" type="checkbox" form="confirmform">';
-        $html .= sprintf($t->translate('Remove the vocabularies "%s"'), $vocabularyLabels); // @translate
+        $html .= $t->translate('Remove the vocabularies :<br/>'); // @translate
+        foreach ($this->rsVocabularies as $v) {
+            $html .= '"'.$v['label'].'"<br/>'; // @translate
+        }
         $html .= '</label>';
 
         $html .= '<p>';
-        $html .= sprintf(
-            $t->translate('If checked, the resource templates "%s" will be removed too. The resource template of the resources that use it will be reset.'), // @translate
-            $resourceTemplates
-        );
+        $html .= $t->translate('If checked, the resource templates will be removed too. The resource template of the resources that use it will be reset.'); // @translate
         $html .= '</p>';
         $html .= '<label><input name="remove-template" type="checkbox" form="confirmform">';
-        $html .= sprintf($t->translate('Remove the resource templates "%s"'), $resourceTemplates); // @translate
+        $html .= $t->translate('Remove the resource templates :<br/>'); // @translate
+        foreach ($this->rsRessourceTemplate as $rt) {
+            $html .= '"'.$rt.'"<br/>'; // @translate
+        }
         $html .= '</label>';
 
         echo $html;
@@ -111,14 +138,56 @@ class Module extends AbstractModule
 
     public function attachListeners(SharedEventManagerInterface $sharedEventManager)
     {
-
         // Display a warn before uninstalling.
         $sharedEventManager->attach(
             'Omeka\Controller\Admin\Module',
             'view.details',
             [$this, 'warnUninstall']
         );
-
-
     }
+
+
+    
+    //
+    public function getConfigForm(PhpRenderer $renderer)
+    {
+        // Factory is not used to make rendering simpler.
+        $services = $this->getServiceLocator();
+        $formElementManager = $services->get('FormElementManager');
+        $config = $services->get('Config');
+        $settings = $services->get('Omeka\Settings');
+        $data = $settings->get('JDCConfigs');
+
+        if(!$data){
+            $defaultSettings = $config['config'];
+            foreach ($defaultSettings as $name => $value) {
+                $data[$name] = $settings->get($name, $value);
+            }    
+        }
+        $dataForm = [];
+        foreach ($data as $key => $value) {
+            $dataForm['o:block[__blockIndex__][o:data][' . $key . ']'] = $value;
+        }
+        $blockFieldset = \JDC\Form\ConfigForm::class;
+
+        $fieldset = $formElementManager->get($blockFieldset);
+        $fieldset->populateValues($dataForm);
+
+        $html = $renderer->formCollection($fieldset, false);
+        return $html;
+    }
+
+
+    public function handleConfigForm(AbstractController $controller)
+    {
+        $result = parent::handleConfigForm($controller);
+        if (!$result) {
+            return false;
+        }
+        $data = $controller->params()->fromPost();
+        $services = $this->getServiceLocator();
+        $settings = $services->get('Omeka\Settings');
+        $settings->set('JDCConfigs', $data['o:block']['__blockIndex__']['o:data']);
+    }    
+
 }

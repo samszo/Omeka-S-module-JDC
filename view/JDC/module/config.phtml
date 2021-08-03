@@ -1,0 +1,16 @@
+<?php declare(strict_types=1);
+/**
+ * @var \Laminas\View\Renderer\PhpRenderer $this
+ * @var \ArchiveRepertory\Form\ConfigForm $form
+ */
+$translate = $this->plugin('translate');
+?>
+<?php $this->headStyle()->appendStyle('.inputs label { display: block; }'); ?>
+
+<?php 
+$form->prepare();
+echo $this->formRow($form->get('csrf')); 
+?>
+
+
+

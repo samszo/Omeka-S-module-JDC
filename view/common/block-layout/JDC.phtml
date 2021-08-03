@@ -1,0 +1,17 @@
+<?php
+$id =$this->params()->fromQuery('id', '');
+$p =$this->params()->fromQuery('p', 'item');
+$heading = $this->vars('heading');
+
+?>
+<div class='jdc' ><?php echo $heading; ?></div>
+
+
+<script>
+
+    window.onload = function() { 
+      console.log('load');
+        
+    };
+
+</script>
