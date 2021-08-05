@@ -1,3 +1,7 @@
 .jdc {
-    background-color: black;
+    background-color: white;
+}
+.dimsText{
+    font-family:"Verdana";                                         
+    font-size:16px;                                             
 }

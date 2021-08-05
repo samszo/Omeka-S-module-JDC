@@ -4,14 +4,15 @@ $p =$this->params()->fromQuery('p', 'item');
 $heading = $this->vars('heading');
 
 ?>
-<div class='jdc' ><?php echo $heading; ?></div>
+<h3 id='jdcTitle<?php echo $id;?>'><?php echo $heading; ?></h3>
+<div id='jdcGraph<?php echo $id;?>' class='jdc' ></div>
 
 
 <script>
-
-    window.onload = function() { 
-      console.log('load');
+  let oJDC, contDim = d3.select('#jdcGraph<?php echo $id;?>').node().getBoundingClientRect();    
+  window.onload = function() { 
+    oJDC = new jdc({'idCont':'jdcGraph<?php echo $id;?>','width':contDim.width,'height':600});
         
-    };
+  };
 
 </script>

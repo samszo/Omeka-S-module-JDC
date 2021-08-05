@@ -78,6 +78,7 @@ class JDC extends AbstractBlockLayout
 
         $view->headScript()->appendFile($view->assetUrl('js/d3.min.js','JDC'));
         $view->headScript()->appendFile($view->assetUrl('js/jdc.js','JDC'));
+        $view->headScript()->appendFile($view->assetUrl('js/d3-hexbin.min.js','JDC'));        
         $view->headLink()->appendStylesheet($view->assetUrl('css/main.css','JDC'));
 
     }

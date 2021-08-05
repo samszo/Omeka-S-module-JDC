@@ -34,7 +34,7 @@ class Module extends AbstractModule
     ];
 
     var $rsRessourceTemplate = [
-        'Matière extensive'
+        'Physique'
         ,'Actant'
         ,'Concept'
         ,'Rapport'
