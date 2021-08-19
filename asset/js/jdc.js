@@ -383,27 +383,6 @@ class jdc {
                     .attr("id", d => 'conceptC_'+me.id+'_'+d.data.id)    
                     .attr("fill", d => colors[c.id](d.depth));
                 
-                /*
-                const leaf = node.filter(d => !d.children);
-                    
-                leaf.select("circle")
-                    .attr("id", d => {
-                        return 'conceptC_'+me.id+'_'+d.data.id
-                    });    
-                leaf.append("clipPath")
-                    .attr("id", d => d.clipUid = "clip"+d.data.id)
-                    .append("use")
-                    .attr("xlink:href", d => '#conceptC_'+me.id+'_'+d.data.id);
-                    
-                leaf.append("text")
-                    .attr("clip-path", d => d.clipUid)
-                    .selectAll("tspan")
-                    .data(d => d.data.title.split(/(?=[A-Z][a-z])|\s+/g))
-                    .join("tspan")
-                    .attr("x", 0)
-                    .attr("y", (d, i, nodes) => `${i - nodes.length / 2 + 0.8}em`)
-                    .text(d => d);
-                */
                 node.append("clipPath")
                     .attr("id", d => d.clipUid = "clip"+d.data.id)
                     .append("use")
@@ -423,73 +402,7 @@ class jdc {
                     .text(d => `${d.ancestors().map(d => d.data.title).reverse().join("/")}\n${format(d.value)}`);
     
 
-
-                /*zooming circle packing    
-                conceptG[c.id].style("cursor", "pointer")
-                    .attr("transform", `translate(${conceptBand(c.id)+conceptBand.bandwidth()/2},${dimsBand('concepts')+dimsBand.bandwidth()/2})`);
-                    .on("click", (event) => zoom(event, roots[c.id]));
-                nodes[c.id] = conceptG[c.id].append("g")
-                .selectAll("circle")
-                .data(roots[c.id].descendants())
-                .join("circle")
-                    .attr("id", d => 'conceptC_'+me.id+'_'+d.data.id)
-                    .attr("fill", d => d.children ? colors[c.id](d.depth) : "white")
-                    .attr("pointer-events", d => !d.children ? "none" : null)
-                    .on("mouseover", function() { d3.select(this).attr("stroke", "#000"); })
-                    .on("mouseout", function() { d3.select(this).attr("stroke", null); })
-                    .on("click", (event, d) => focus[c.id] !== d && (zoom(event, d), event.stopPropagation()));
-            
-                labels[[c.id]] = conceptG[[c.id]].append("g")
-                    .style("font", "10px sans-serif")
-                    .attr("pointer-events", "none")
-                    .attr("text-anchor", "middle")
-                .selectAll("text")
-                .data(roots[[c.id]].descendants())
-                .join("text")
-                    .style("fill-opacity", d => d.parent === roots[[c.id]] ? 1 : d === roots[[c.id]] ? 1 : 0)
-                    .style("display", d => d.parent === roots[[c.id]] ? "inline" : d === roots[[c.id]] ? "inline" : "none")
-                    .text(d => d.data.title);
-                zoomTo([roots[c.id].x, roots[c.id].y, roots[c.id].r * 2, c.id]);
-                */
-            });
-          
-            function zoomTo(v) {
-              const k = dimsBand.bandwidth() / v[2];
-          
-              views[v[3]] = v;
-                labels[v[3]].attr("transform", d => {
-                    let posiBas = 0;
-                    if(d === roots[v[3]]) posiBas = dimsBand.bandwidth()/2-10;
-                    return `translate(${(d.x - v[0]) * k},${(d.y - v[1] + posiBas) * k})`
-                });
-                nodes[v[3]].attr("transform", d => `translate(${(d.x - v[0]) * k},${(d.y - v[1]) * k})`);  
-                nodes[v[3]].attr("r", d => d.r * k);
-            }
-          
-            function zoom(event, d) {
-          
-                let idGroup = getRootHierarchy(d);  
-                focus[idGroup] = d;
-          
-              const transition = conceptG[idGroup].transition()
-                  .duration(event.altKey ? 7500 : 750)
-                  .tween("zoom", d => {
-                    const i = d3.interpolateZoom(views[idGroup], [focus[idGroup].x, focus[idGroup].y, focus[idGroup].r * 2]);
-                    return t => {
-                        const it = i(t);
-                        it[3]=idGroup;
-                        zoomTo(it);
-                    }
-                  });
-          
-              labels[idGroup]
-                .filter(function(d) { return d.parent === focus[idGroup] || this.style.display === "inline"; })
-                .transition(transition)
-                  .style("fill-opacity", d => d.parent === focus[idGroup] ? 1 : d === roots[idGroup] ? 1 : 0)
-                  .on("start", function(d) { if (d.parent === focus[idGroup] || d === roots[idGroup]) this.style.display = "inline"; })
-                  .on("end", function(d) { if (d.parent !== focus[idGroup] && d !== roots[idGroup]) this.style.display = "none"; });
-            }
-          
+            });          
 
         }
 
@@ -511,25 +424,6 @@ class jdc {
             , physiquesG=[];
             me.data.dimensions.physiques.children.forEach(p=>{
                 physiquesG[p.id]=container.append('g').attr('id','physiquesG_'+me.id+'_'+p.id).attr('class','jdcPhysiqueG');
-
-                /*zoomable treemap
-                treemap = data => d3.treemap()
-                    .tile(tile)
-                (d3.hierarchy(data)
-                    .sum(d => d.value)
-                    .sort((a, b) => b.value - a.value));   
-
-                physiquesG[p.id].call(render, treemap(p));
-
-               //construction du rectangle global
-                container.append('rect').attr('id','physiquesRect_'+me.id).attr('class','jdcPhysiqueRect')
-                    .attr('x',physiqueBand(p.id)).attr('y',dimsBand('physiques'))
-                    .attr("width", physiqueBand.bandwidth())
-                    .attr("height", dimsBand.bandwidth()-30)
-                    .attr("fill", "none")
-                    .attr("stroke", "black");
-
-                */
 
                 //Nested treemap
                 treemap = data => d3.treemap()
@@ -587,111 +481,7 @@ class jdc {
 
               })    
 
-            function render(group, root) {
-                const node = group
-                    .selectAll("g")
-                    .data(root.children.concat(root))
-                    .join("g");
-          
-              node.filter(d => d === root ? d.parent : d.children)
-                  .attr("cursor", "pointer")
-                  .on("click", (event, d) => d === root ? zoomout(root) : zoomin(d));
-          
-              node.append("title")
-                  .text(d =>{
-                      return `${name(d)}\n${format(d.value)}`;
-                  }) 
-          
-              node.append("rect")
-                  .attr("id", d => d.leafUid = "leaf_"+me.id+'_'+d.data.id)
-                  .attr("fill", d => d === root ? "#fff" : d.children ? "#ccc" : "#ddd")
-                  .attr("stroke", "#fff");
-          
-              node.append("clipPath")
-                  .attr("id", d => d.clipUid = "clip"+d.data.id)
-                .append("use")
-                  .attr("xlink:href", d => d.leafUid.href);
-          
-              node.append("text")
-                  .attr("clip-path", d => d.clipUid)
-                  .attr("font-weight", d => d === root ? "bold" : null)
-                .selectAll("tspan")
-                //.data(d => (d === root ? name(d) : d.data.title).split(/(?=[A-Z][^A-Z])/g).concat(format(d.value)))
-                .data(d => (d === root ? name(d) : d.data.title).split(/(?=[A-Z][^A-Z])/g))
-                .join("tspan")
-                  .attr("x", 3)
-                  .attr("y", (d, i, nodes) => `${(i === nodes.length - 1) * 0.3 + 1.1 + i * 0.9}em`)
-                  .attr("fill-opacity", (d, i, nodes) => i === nodes.length - 1 ? 0.7 : null)
-                  .attr("font-weight", (d, i, nodes) => i === nodes.length - 1 ? "normal" : null)
-                  .text(d => d);
-          
-              group.call(position, root);
-            }
-          
-            function position(group, root) {
-                let idGroup = getRootHierarchy(root);  
-                let xRoot = physiqueBand(idGroup);
-                //console.log('root id = '+idGroup+' - xRoot = '+xRoot);
-                x.range([xRoot, xRoot+physiqueBand.bandwidth()]);
-                group.selectAll("g")
-                  .attr("transform", d => d === root ? `translate(${xRoot},${dimsBand('physiques')})` : `translate(${x(d.x0)},${y(d.y0)})`)
-                .select("rect")
-                  .attr("width", d => {
-                      return d === root ? physiqueBand.bandwidth() : x(d.x1) - x(d.x0)
-                  })
-                  .attr("height", d => d === root ? 30 : y(d.y1) - y(d.y0));
-            }
-            
-            // When zooming in, draw the new nodes on top, and fade them in.
-            function zoomin(d) {
-              let idGroup = getRootHierarchy(d);  
-              const group0 = physiquesG[idGroup].attr("pointer-events", "none");
-              const group1 = physiquesG[idGroup] = container.append("g").call(render, d);
-          
-              x.domain([d.x0, d.x1]);
-              y.domain([d.y0, d.y1]);
-        
-              svg.transition()
-                  .duration(750)
-                  .call(t => group0.transition(t).remove()
-                    .call(position, d.parent))
-                  .call(t => group1.transition(t)
-                    .attrTween("opacity", () => d3.interpolate(0, 1))
-                    .call(position, d));
-            }
-          
-            // When zooming out, draw the old nodes on top, and fade them out.
-            function zoomout(d) {
-                let idGroup = getRootHierarchy(d);  
-                const group0 = physiquesG[idGroup].attr("pointer-events", "none");
-                const group1 = physiquesG[idGroup] = container.append("g").call(render, d.parent);
-          
-              x.domain([d.parent.x0, d.parent.x1]);
-              y.domain([d.parent.y0, d.parent.y1]);
-          
-              svg.transition()
-                  .duration(750)
-                  .call(t => group0.transition(t).remove()
-                    .attrTween("opacity", () => d3.interpolate(1, 0))
-                    .call(position, d))
-                  .call(t => group1.transition(t)
-                    .call(position, d.parent));
-            }
-
-            /*
-            This custom tiling function adapts the built-in binary tiling function 
-            for the appropriate aspect ratio when the treemap is zoomed-in.
-            */
-            function tile(node, x0, y0, x1, y1) {
-                d3.treemapBinary(node, 0, 0, physiqueBand.bandwidth(), dimsBand.bandwidth());
-                for (const child of node.children) {
-                    child.x0 = x0 + child.x0 / physiqueBand.bandwidth() * (x1 - x0);
-                    child.x1 = x0 + child.x1 / physiqueBand.bandwidth() * (x1 - x0);
-                    child.y0 = y0 + child.y0 / dimsBand.bandwidth() * (y1 - y0);
-                    child.y1 = y0 + child.y1 / dimsBand.bandwidth() * (y1 - y0);
-                }
-            }          
-
+      
         }
 
 
