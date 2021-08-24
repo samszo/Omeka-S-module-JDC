@@ -76,10 +76,19 @@ class JDC extends AbstractBlockLayout
     public function prepareRender(PhpRenderer $view)
     {
 
+        /*TODO: vérifier le chargement par le thème du site
         $view->headScript()->appendFile($view->assetUrl('js/d3.min.js','JDC'));
+        $view->headScript()->appendFile($view->assetUrl('js/bootstrap.min.js','JDC'));        
+        $view->headScript()->appendFile($view->assetUrl('js/all.min.js','JDC'));        
+        $view->headLink()->appendStylesheet($view->assetUrl('css/bootstrap.min.css','JDC'));
+        */
         $view->headScript()->appendFile($view->assetUrl('js/jdc.js','JDC'));
-        $view->headScript()->appendFile($view->assetUrl('js/d3-hexbin.min.js','JDC'));        
+        $view->headScript()->appendFile($view->assetUrl('js/d3-hexbin.min.js','JDC'));
+        $view->headScript()->appendFile($view->assetUrl('js/jquery-3.6.0.min.js','JDC'));                
+        $view->headScript()->appendFile($view->assetUrl('js/jBox.all.min.js','JDC'));                
+        $view->headScript()->appendFile($view->assetUrl('js/ihm.js','JDC'));        
         $view->headLink()->appendStylesheet($view->assetUrl('css/main.css','JDC'));
+        $view->headLink()->appendStylesheet($view->assetUrl('css/jBox.all.min.css','JDC'));
 
     }
 

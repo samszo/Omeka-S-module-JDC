@@ -1,0 +1,49 @@
+<?php
+$item = $this->vars('item');
+$idItem = $item ? $item->id() : 0;
+//les dimensions correspondent au nom de la class du vocabulaire JDC
+$dimensions = ['Existence','Physique','Actant','Concept','Rapport'];
+
+function itemChecked($listItem, $item){
+    foreach ($listItem as $i) {
+        if($i->id()==$item->id()) return 'checked="true" url="'.$i->url().'" ';
+    }
+    return ' url="'.$item->url().'" ';
+}
+
+?>
+<nav class="navbar navbar-expand-lg navbar-light bg-light">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="#">
+            <img style="height: 40px;" src="<?php echo $this->assetUrl('img/logo_jdc.png','JDC'); ?>" alt="Jardin des connaissances" />
+            <?php echo $this->vars('heading'); ?>
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarJDCtools"
+            aria-controls="navbarJDCtools" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarJDCtools">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                <?php foreach ($dimensions as $dim): ?>
+                <li class="nav-item dropdown" id="navItemJDC<?php echo $dim;?>">
+                    <a class="nav-link dropdown-toggle <?php echo $dim!='Existence' ? 'disabled' : '';?>" href="#" id="ddJDC<?php echo $dim;?>" role="button"
+                        data-bs-toggle="dropdown" data-bs-auto-close="<?php echo $dim=='Existence' ? 'true' : 'inside';?>" aria-expanded="false">
+                        <?php echo $dim;?>
+                    </a>
+                    <ul class="dropdown-menu" aria-labelledby="ddJDC<?php echo $dim;?>">
+                        <li>
+                            <a class="dropdown-item" onclick="createDim(<?php echo $idItem;?>,'<?php echo $dim;?>')" href="#">Ajouter</a>
+                            <i id='ajoutItemSpin<?php echo $dim;?>' style='display:none' class="fas fa-cog fa-spin" ></i>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><h6 class="dropdown-header">Selectionner</h6></li>
+
+                        <?php echo $this->partial('JDC/dim_selector',['item'=>$item,'dim'=>$dim]);?>
+
+                    </ul>
+                </li>
+                <?php endforeach; ?>
+            </ul>
+        </div>
+    </div>
+</nav>

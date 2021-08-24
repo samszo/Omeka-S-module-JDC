@@ -5,3 +5,18 @@
     font-family:"Verdana";                                         
     font-size:16px;                                             
 }
+.jdcExitenceG{
+    cursor: pointer;
+}
+.jdcRapportG{
+    cursor: pointer;
+}
+.jdcPhysiqueG{
+    cursor: pointer;
+}
+.jdcActantG{
+    cursor: pointer;
+}
+.jdcConceptG{
+    cursor: pointer;
+}

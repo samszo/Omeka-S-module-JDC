@@ -1,18 +1,33 @@
 <?php
 $id =$this->params()->fromQuery('id', '');
 $p =$this->params()->fromQuery('p', 'item');
-$heading = $this->vars('heading');
+$item = $this->vars('item');
+$site = $this->vars('site');
 
 ?>
-<h3 id='jdcTitle<?php echo $id;?>'><?php echo $heading; ?></h3>
-<div id='jdcGraph<?php echo $id;?>' class='jdc' ></div>
+<div class="container">
+    <div class="row">
+      <?php echo $this->partial('JDC/nav_tools',['item'=>$item,'heading'=>$this->vars('heading')]);?>
+    </div>
+    <div class="row">
+      <div id='jdcGraph<?php echo $id;?>' class='jdc' ></div>
+    </div>
+</div>
+
 
 
 <script>
-  let oJDC, contDim = d3.select('#jdcGraph<?php echo $id;?>').node().getBoundingClientRect();    
+  contDim = d3.select('#jdcGraph<?php echo $id;?>').node().getBoundingClientRect();    
   window.onload = function() { 
     oJDC = new jdc({'idCont':'jdcGraph<?php echo $id;?>','width':contDim.width,'height':600});
-        
+    toolTipAide = new jBox('Tooltip',{
+      target: '#navItemJDCExistence',
+      position: {
+          x: 'center',
+          y: 'top'
+      },
+      content:'Pour commencer créer ou sélectionner une existence'       
+    }).open();
   };
 
 </script>
