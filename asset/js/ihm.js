@@ -2,7 +2,8 @@
 urlAjax est défini dans le thème omeka S : JDC
 */
 
-let oJDC, contDim, toolTipAide;
+let oJDC, contDim, toolTipAide, modalAjoutRapport;
+
 function dimItemChange(dt){
     dt.checked=this.event.target.checked;
     if(!dt.checked && dt.dim=='Existence'){
@@ -28,7 +29,7 @@ function dimItemChange(dt){
             if(dt.dim=='Existence'){
                 Object.keys(oJDC.data).forEach(d=>{
                     //active les menus
-                    d3.select('#ddJDC'+d).attr('class','nav-link dropdown-toggle')
+                    if(d!="Existence")d3.select('#ddJDC'+d).attr('class','nav-link dropdown-toggle')
                     //coche les cases des menus des dimensions présentes
                     Object.keys(oJDC.hierarchies).forEach(h=>{
                         oJDC.hierarchies[h].descendants().forEach(d=>{
@@ -48,35 +49,52 @@ function dimItemChange(dt){
     });
 
 }
-function appendDimSelector(dim,item,idExi){
+function appendDimSelector(rs,idExi){
     //ajoute l'item dans le menu
-    let dimS = d3.select('#dimSelector'+dim).append('div').attr('class',"form-check");                
-    dimS.append('input').attr('type',"checkbox").attr('url',item['@id']).attr('checked',true)
-        .attr('class',"form-check-input iss").attr('id','ddcJDC'+item['o:id'])
-        .on('change',e=>dimItemChange({'idDim':item['o:id'], 'idExi':idExi, 'dim':dim}));
-    dimS.append('label').attr('class',"form-check-label").attr('for',"ddcJDC"+item['o:id'])
-        .html(item['o:title']);
-    dimS.append('i').attr('id','dimItemSpin'+item['o:id']).style('display','none').attr('class',"fas fa-cog fa-spin");
+    for (const dim in rs) {
+        let dimS = d3.select('#dimSelector'+dim).append('div').attr('class',"form-check");
+        rs[dim].forEach(item=>{
+            dimS.append('input').attr('type',"checkbox").attr('url',item['@id']).attr('checked',true)
+            .attr('class',"form-check-input iss").attr('id','ddcJDC'+item.id)
+            .on('change',e=>dimItemChange({'idDim':item.id, 'idExi':idExi, 'dim':dim}));
+            dimS.append('label').attr('class',"form-check-label").attr('for',"ddcJDC"+item.id)
+                .html(item['o:title']);
+            dimS.append('i').attr('id','dimItemSpin'+item.id).style('display','none').attr('class',"fas fa-cog fa-spin");
+        });                
+    }
+      
 }
 
-function createDim(id, dim){
+function createDim(id, dim, data){
     console.log('createDim',[id, dim]);
     d3.select('#ajoutItemSpin'+dim).style('display','block');
+    if(dim=='Rapport' && !data){
+        oJDC.selectRapportDim(false,false);
+        return
+    }
+    let dt = {
+        'dim': dim,
+        'id': id,
+        'idExi': dim=="Existence" ? null : oJDC.idExi,
+        'action': 'createDim',
+        'data':data ? data : {'dcterms:title':'New '+dim+" - "+Date.now()}                    
+    }
     $.ajax({
         type: 'POST',
         dataType: 'json',
         url: urlAjax,
-        data: {
-            'dim': dim,
-            'id': id,
-            'idExi': dim=="Existence" ? null : oJDC.idExi,
-            'action': 'createDim',
-            'data':{'dcterms:title':'New '+dim+" - "+Date.now()}                    
-        }
+        data: dt
     })
-    .done(function(item) {
-        console.log(item);
-        appendDimSelector(dim,item,dim=="Existence" ? null : oJDC.idExi)
+    .done(function(rs) {
+        console.log(rs);
+        appendDimSelector(rs,dim=="Existence" ? null : oJDC.idExi)
+        oJDC.appendDim(dt, rs);
+        //active les menus
+        if(dim=="Existence"){
+            Object.keys(rs).forEach(d=>{
+                if(d!="Existence")d3.select('#ddJDC'+d).attr('class','nav-link dropdown-toggle')
+            });
+        }
         d3.select('#ajoutItemSpin'+dim).style('display','none');
     })
     .fail(function(e) {

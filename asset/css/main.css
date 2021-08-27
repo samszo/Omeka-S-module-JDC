@@ -20,3 +20,8 @@
 .jdcConceptG{
     cursor: pointer;
 }
+@keyframes colorChange {
+    0%{fill:#ff0000}
+    50%{fill:#000}
+    100%{fill: #ff0000}
+}

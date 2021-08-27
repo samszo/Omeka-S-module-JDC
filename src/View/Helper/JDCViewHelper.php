@@ -9,6 +9,7 @@ class JDCViewHelper extends AbstractHelper
     protected $logger;
     protected $settings;
     protected $exiDims;
+    protected $rdfDims;
     
     public function __construct($services)
     {
@@ -16,6 +17,7 @@ class JDCViewHelper extends AbstractHelper
       $this->logger = $services['logger'];
       $this->settings = $services['settings']->get('JDCConfigs');
       $this->exiDims = ['Physique','Actant','Concept','Rapport'];
+      $this->rdfDims = ['Sujet','Objet','Predicat'];
 
     }
 
@@ -48,28 +50,53 @@ class JDCViewHelper extends AbstractHelper
     }
 
     function appendDim($params){
-      if($params['dim']=="Existence"){
-        //récupère la définition de l'existence
-        $oDim = $this->api->read('items', $params['idDim'])->getContent();
-        //récupère les dimensions
-        foreach ($this->exiDims as $dim) {
-          $rs[$dim]['children']=$this->childrenDim($oDim,'jdc:has'.$dim);
-        }
-        $children=false;
-      }else{
-        $oP = $this->api->search('properties', ['term' => 'jdc:has'.$params['dim']])->getContent()[0];
-        $newValue[$oP->term()][]=['value_resource_id' => $params['idDim'],'property_id' => $oP->id(),'type' => 'resource'];
-        $this->api->update('items', ($params['idItem'] ? $params['idItem'] : $params['idExi'])
-          , $newValue, [], ['isPartial' => true,'collectionAction' => 'append']);
-        $oDim = $this->api->read('items', $params['idDim'])->getContent();
-        $children=$this->childrenDim($oDim,'jdc:has'.$params['idDim']);
+
+      $children=false;
+      $nodes=false;
+      switch ($params['dim']) {
+        case 'Existence':
+          //récupère la définition de l'existence
+          $oDim = $this->api->read('items', $params['idDim'])->getContent();
+          //récupère les dimensions
+          foreach ($this->exiDims as $dim) {
+            $rs[$dim]['children']=$this->childrenDim($oDim,'jdc:has'.$dim);
+          }
+          break;
+        case 'Rapport':
+          $oDim = $this->addDimToExi($params);
+          $nodes = $this->getRapportNodes($oDim);
+          //ajoute les dimensions à l'existence si elles n'existent pas          
+          break;
+        default:
+          $oDim = $this->addDimToExi($params);
+          $children=$this->childrenDim($oDim,'jdc:has'.$params['dim']);
+          break;
       }
       $vDim = $oDim->getJsonLd();
-      $vDim['id'] = $oDim->id();
-      $vDim['value'] = 1;//nécessaire pour d3.pack()
+      $vDim = $this->setPropForIHM($vDim, $oDim);
       if($children)$vDim['id']['children']=$children;
+      if($nodes)$vDim['nodes'] = $nodes;
       $rs[$params['dim']][]=$vDim;
       return $rs;
+    }
+
+    function getRapportNodes($oDim){
+        //création des noeuds du rapport
+        $nodes = [];
+        foreach ($this->rdfDims as $rdf) {
+          $itemsAsRdf = $oDim->value('jdc:has'.$rdf);
+          $rRdf = $itemsAsRdf->valueResource();
+          $nodes[]=['rdf'=>$rdf,'dim'=>$rRdf->resourceClass()->label(),'id'=>$rRdf->id()];
+        }
+        return $nodes;          
+    }
+
+    function addDimToExi($params){
+      $oP = $this->api->search('properties', ['term' => 'jdc:has'.$params['dim']])->getContent()[0];
+      $newValue[$oP->term()][]=['value_resource_id' => $params['idDim'],'property_id' => $oP->id(),'type' => 'resource'];
+      $this->api->update('items', ($params['idItem'] ? $params['idItem'] : $params['idExi'])
+        , $newValue, [], ['isPartial' => true,'collectionAction' => 'append']);
+      return $this->api->read('items', $params['idDim'])->getContent();
     }
 
     function childrenDim($r, $propAs, $getChild=true){
@@ -78,14 +105,22 @@ class JDCViewHelper extends AbstractHelper
       foreach ($itemsAsDim as $iDim) {
         $rDim = $iDim->valueResource();
         $vDim = $rDim->getJsonLd();//json_decode(json_encode($rDim),true)
+        $vDim = $this->setPropForIHM($vDim, $rDim);
         if($getChild)$vDim['children'] = $this->childrenDim($rDim, $propAs);
-        $vDim['id'] = $rDim->id();
-        $vDim['value'] = 1;//nécessaire pour d3.pack()
+        if($propAs=='jdc:hasRapport')$vDim['nodes'] = $this->getRapportNodes($rDim);
         $children[]=$vDim;
       }
       return $children;
     }
     
+    function setPropForIHM($v, $r){
+      $v['id'] = $r->id();
+      $v['value'] = 1;//nécessaire pour d3.pack()
+      $v['adminUrl'] = $r->adminUrl();
+      $v['siteUrl'] = $r->siteUrl();
+      return $v;
+    }
+
     function removeDim($params){
         $oP = $this->api->search('properties', ['term' => 'jdc:has'.$params['dim']])->getContent()[0];
         //récupère les dimensions        
@@ -110,13 +145,19 @@ class JDCViewHelper extends AbstractHelper
 
       $oItem = $this->setData($params['data'], $rt, $rc);
 
-      $rs = $this->api->create('items', $oItem, [], ['continueOnError' => false])->getContent();
+      $oDim = $this->api->create('items', $oItem, [], ['continueOnError' => false])->getContent();
 
       //création de la relation
       if($params['idExi']){
-        $params['id']=$params['idExi'];
-        $params['idDim']=$rs->id();
+        $params['idItem']=$params['idExi'];
+        $params['idDim']=$oDim->id();
         $rs = $this->appendDim($params);
+      }else{
+        $vDim = $oDim->getJsonLd();
+        $rs['Existence'][] = $this->setPropForIHM($vDim, $oDim);
+        foreach ($this->exiDims as $dim) {
+          $rs[$dim]=[];
+        }
       }
 
       return $rs;

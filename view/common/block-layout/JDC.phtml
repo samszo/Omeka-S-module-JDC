@@ -1,11 +1,10 @@
 <?php
 $id =$this->params()->fromQuery('id', '');
-$p =$this->params()->fromQuery('p', 'item');
 $item = $this->vars('item');
 $site = $this->vars('site');
 
 ?>
-<div class="container">
+<div class="container" id="jdcMainContainer">
     <div class="row">
       <?php echo $this->partial('JDC/nav_tools',['item'=>$item,'heading'=>$this->vars('heading')]);?>
     </div>
@@ -13,13 +12,16 @@ $site = $this->vars('site');
       <div id='jdcGraph<?php echo $id;?>' class='jdc' ></div>
     </div>
 </div>
+<?php echo $this->partial('JDC/modal_ajoutRapport');?>
 
 
 
 <script>
   contDim = d3.select('#jdcGraph<?php echo $id;?>').node().getBoundingClientRect();    
-  window.onload = function() { 
-    oJDC = new jdc({'idCont':'jdcGraph<?php echo $id;?>','width':contDim.width,'height':600});
+  window.onload = function() {
+    //ajouter le JDC 
+    oJDC = new jdc({'idCont':'jdcGraph<?php echo $id;?>','width':contDim.width,'height':600,'fctCreaDim':createDim});
+    //gestion des tooltip
     toolTipAide = new jBox('Tooltip',{
       target: '#navItemJDCExistence',
       position: {
@@ -28,6 +30,10 @@ $site = $this->vars('site');
       },
       content:'Pour commencer créer ou sélectionner une existence'       
     }).open();
+        
+    //gestion des modals
+    modalAjoutRapport = new bootstrap.Modal(document.getElementById('modalAjoutRapport'));
+
   };
 
 </script>

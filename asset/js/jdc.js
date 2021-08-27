@@ -7,7 +7,8 @@ class jdc {
         this.width = params.width ? params.width : 400;
         this.height = params.height ? params.height : 400;
         this.dataUrl = params.dataUrl ? params.dataUrl : false;
-        this.fctClickNode = params.fctClickNode ? params.fctClickNode : console.log;
+        this.fctClickDim = params.fctClickDim ? params.fctClickDim : showDetail;
+        this.fctCreaDim = params.fctCreaDim ? params.fctCreaDim : console.log;
         this.data = params.data ? params.data : false;
         this.hierarchies = {};
         this.dataTest = {
@@ -119,7 +120,7 @@ class jdc {
             ]}
         }; 
 
-        var svg, svgBBox, container, dimsBand, physiqueBand;            
+        let svg, svgBBox, container, dimsBand, physiqueBand, toolTipAjoutRapport, dimSelect, rdfTriplet = ['Sujet', 'Objet', 'Predicat'], rapportDims=[];            
 
         this.init = function () {
             
@@ -205,6 +206,11 @@ class jdc {
             //renvoie le noeud du treemap   
             return root.data.id;
         }
+
+        function clickDim(e,d){
+            me.fctClickDim(e,d);
+        }
+
         function showDetail(e,d){
             console.log(e,d);
             if(!d.modal){
@@ -219,42 +225,20 @@ class jdc {
                     position: {
                         x: 'left',
                         y: 'top'
-                    },                
-                    ajax: {
-                        url: d['@id'],
-                        reload: 'strict',
-                        setContent: false,
-                        success: function (response) {
-                            console.log('jBox AJAX response', response);
-                            this.setTitle(response['o:title']);
-                            this.setContent(getModalContent(response));
-                        },
-                        error: function () {
-                            this.setContent('<b style="color: #d33">Error loading content.</b>');
-                        }
-                    }
-                });
+                    },
+                    title:d.data ? d.data['o:title'] : d['o:title'],
+                    content:getModalContent(d)
+                })
             }
             d.modal.open();            
         }
 
         function getModalContent(d){
-            return `<form>
-            <div class="mb-3">
-              <label for="exampleInputEmail1" class="form-label">Email address</label>
-              <input type="email" class="form-control" id="exampleInputEmail1" aria-describedby="emailHelp">
-              <div id="emailHelp" class="form-text">We'll never share your email with anyone else.</div>
-            </div>
-            <div class="mb-3">
-              <label for="exampleInputPassword1" class="form-label">Password</label>
-              <input type="password" class="form-control" id="exampleInputPassword1">
-            </div>
-            <div class="mb-3 form-check">
-              <input type="checkbox" class="form-check-input" id="exampleCheck1">
-              <label class="form-check-label" for="exampleCheck1">Check me out</label>
-            </div>
-            <button type="submit" class="btn btn-primary">Submit</button>
-          </form>`;
+            let dt = d.data ? d.data : d;
+            return `<iframe 
+            width="600"
+            height="600"
+            src="${user ? dt.adminUrl : dt.siteUrl}"></iframe>`;//ATTENTION user définie dans le thème JDC
 
         }
 
@@ -275,6 +259,7 @@ class jdc {
 
 
         function addRapports(){
+            if(!me.data.Rapport.children.length)return;
             //définition des positions des noeuds de contact avec les dimensions
             //physique = autant de bandes que d'actant chaque bandes a autant de bande que de rapport 
             let scalePhy = d3.scaleBand()
@@ -282,7 +267,7 @@ class jdc {
             .paddingInner(0.5) // edit the inner padding value in [0,1]
             .paddingOuter(0.5) // edit the outer padding value in [0,1]                
             .range([0, physiqueBand.bandwidth()])
-            .align(0.5)   
+            .align(0.5);
             //construction des datas
             me.data.Rapport.children.forEach(r=>{
                 //récupère les positions
@@ -290,39 +275,45 @@ class jdc {
                 r.links = [];
                 for (let index = 0; index < nbNode; index++) {
                     let n = r.nodes[index];
-                    n.path = dimNodePath(n);
-                    dimNodePosi(n);
-                    switch (n.dim) {
-                        case 'Actant':
-                            nActant = n;
-                            //on ajoute un noeud en bas de l'exagone suivant le nombre de lien
-                            nActantBas = JSON.parse(JSON.stringify(n));
-                            nActantBas.posi.y += dimsBand.bandwidth();
-                            r.nodes.push(nActantBas);
-                            break;                    
-                        case 'Physique':
-                            //on ajoute un noeud en bas du rectangle dans la bande qui correspond
-                            nPhysiqueBas = JSON.parse(JSON.stringify(n));
-                            marge = dimsBand.step()-dimsBand.bandwidth();
-                            nPhysiqueBas.posi.y = dimsBand('Physique')+dimsBand.bandwidth()+svgBBox.y;//nPhysiqueBas.posi.y+nPhysiqueBas.posi.height;//+svgBBox.y-marge;
-                            nPhysiqueBas.posi.x = physiqueBand(n.dataRoot.id)+scalePhy(nActant.id)+svgBBox.x;
-                            r.nodes.push(nPhysiqueBas);
-                            r.links.push({'source':nActant.posi, 'target':nPhysiqueBas.posi, 'id':nActant.id+'_'+n.id}); 
-                            r.links.push({'source':nPhysiqueBas.posi, 'target':n.posi, 'id':nActant.id+'_'+n.id}); 
-                            break;                    
-                        case 'Concept':
-                            //on ajoute un noeud en haut du cercle
-                            nConceptHaut = JSON.parse(JSON.stringify(n));
-                            nConceptHaut.posi.y = dimsBand('Concept')+svgBBox.y;//nPhysiqueBas.posi.y+nPhysiqueBas.posi.height;//+svgBBox.y-marge;
-                            nConceptHaut.dim = 'articumation'
-                            r.nodes.push(nConceptHaut);
-                            //déplace l'arrivé du lien sur le cercle du noeud                            
-                            nPosi = JSON.parse(JSON.stringify(n.posi));
-                            nPosi.y -= nPosi.height/2
-                            r.links.push({'source':nActantBas.posi, 'target':nConceptHaut.posi, 'id':nActant.id+'_'+n.id}); 
-                            r.links.push({'source':nConceptHaut.posi, 'target':nPosi, 'id':nActant.id+'_'+n.id}); 
-                            break;                    
+                    if(n.dim=='articulation'){
+                        r.nodes.splice(index, 1);
+                    }else{
+                        n.path = dimNodePath(n);
+                        dimNodePosi(n);
+                        switch (n.dim) {
+                            case 'Actant':
+                                nActant = n;
+                                //on ajoute un noeud en bas de l'exagone suivant le nombre de lien
+                                nActantBas = JSON.parse(JSON.stringify(n));
+                                nActantBas.posi.y += dimsBand.bandwidth();
+                                nActantBas.dim = 'articulation'
+                                r.nodes.push(nActantBas);
+                                break;                    
+                            case 'Physique':
+                                //on ajoute un noeud en bas du rectangle dans la bande qui correspond
+                                nPhysiqueBas = JSON.parse(JSON.stringify(n));
+                                marge = dimsBand.step()-dimsBand.bandwidth();
+                                nPhysiqueBas.posi.y = dimsBand('Physique')+dimsBand.bandwidth()+svgBBox.y;//nPhysiqueBas.posi.y+nPhysiqueBas.posi.height;//+svgBBox.y-marge;
+                                nPhysiqueBas.posi.x = physiqueBand(n.dataRoot.id)+scalePhy(nActant.id)+svgBBox.x;
+                                nPhysiqueBas.dim = 'articulation'
+                                r.nodes.push(nPhysiqueBas);
+                                r.links.push({'source':nActant.posi, 'target':nPhysiqueBas.posi, 'id':nActant.id+'_'+n.id}); 
+                                r.links.push({'source':nPhysiqueBas.posi, 'target':n.posi, 'id':nActant.id+'_'+n.id}); 
+                                break;                    
+                            case 'Concept':
+                                //on ajoute un noeud en haut du cercle
+                                nConceptHaut = JSON.parse(JSON.stringify(n));
+                                nConceptHaut.posi.y = dimsBand('Concept')+svgBBox.y;//nPhysiqueBas.posi.y+nPhysiqueBas.posi.height;//+svgBBox.y-marge;
+                                nConceptHaut.dim = 'articulation'
+                                r.nodes.push(nConceptHaut);
+                                //déplace l'arrivé du lien sur le cercle du noeud                            
+                                nPosi = JSON.parse(JSON.stringify(n.posi));
+                                nPosi.y -= nPosi.height/2
+                                r.links.push({'source':nActantBas.posi, 'target':nConceptHaut.posi, 'id':nActant.id+'_'+n.id}); 
+                                r.links.push({'source':nConceptHaut.posi, 'target':nPosi, 'id':nActant.id+'_'+n.id}); 
+                                break;                    
                         }
+                    }
                 };
             })
 
@@ -330,7 +321,7 @@ class jdc {
             let RapportG = container.selectAll('.jdcRapportG').data(me.data.Rapport.children).enter()
                 .append('g').attr('id',r=>'jdcRapportG_'+me.id+'_'+r.id).attr('class','jdcRapportG')
                 .attr("transform", `translate(${-svgBBox.x},${-svgBBox.y})`)
-                .on('click',showDetail);
+                .on('click',clickDim);
                 
                 
             //draw circles for the links 
@@ -365,10 +356,10 @@ class jdc {
                         path = "#physiqueNode_"+me.id+'_'+n.id;
                         break;                
                     case 'Actant':
-                        path = '#actantG_'+me.id+'_'+n.id;
+                        path = '#jdcActantG_'+me.id+'_'+n.id;
                         break;                
                     case 'Concept':
-                        path = '#conceptC_'+me.id+'_'+n.id;
+                        path = '#conceptG_'+me.id+'_'+n.id;
                         break;                
                     }
                 return path;
@@ -421,7 +412,7 @@ class jdc {
         }
 
         function addConcepts(){
-
+            if(!me.data.Concept.children.length)return;
             let ConceptKey = me.data.Concept.children.map(d=>d.id)
             , conceptBand = d3.scaleBand()
                 .domain(ConceptKey)
@@ -462,9 +453,9 @@ class jdc {
                     .enter()
                     .append("g")
                     .attr('class','jdcConcept')
-                    .attr('id','conceptC_'+me.id+'_'+c.id)
+                    .attr('id','conceptG_'+me.id+'_'+c.id)
                     .attr("transform", d => `translate(${d.x + 1},${d.y + 1})`)
-                    .on('click',showDetail);
+                    .on('click',clickDim);
                     
                 
                 node.append("circle")
@@ -497,9 +488,10 @@ class jdc {
 
   
         function addPhysiques(){
-
+            if(!me.data.Physique.children.length)return;
+            let PhysiqueKey = me.data.Physique.children.map(d=>d.id);
             physiqueBand = d3.scaleBand()
-                .domain(me.data.Physique.children.map(d=>d.id))
+                .domain(PhysiqueKey)
                 .paddingInner(0.5) // edit the inner padding value in [0,1]
                 .paddingOuter(0.5) // edit the outer padding value in [0,1]                
                 .range([0, me.width])
@@ -508,10 +500,16 @@ class jdc {
             , y = d3.scaleLinear().rangeRound([dimsBand('Physique')+30, dimsBand.bandwidth()])
             , name = d => d.ancestors().reverse().map(d => d.data['o:title']).join("/")          
             , format = d3.format(",d")
+            , PhysiqueColor = d3.scaleOrdinal(PhysiqueKey, d3.schemeTableau10)
             , treemap           
-            , PhysiqueG=[];
+            , PhysiqueG=[], colors=[];
             me.data.Physique.children.forEach(p=>{
                 PhysiqueG[p.id]=container.append('g').attr('id','jdcPhysiqueG_'+me.id+'_'+p.id).attr('class','jdcPhysiqueG');
+                const hsl = d3.hsl(PhysiqueColor([p.id]));
+                colors[p.id] = d3.scaleLinear()
+                    .domain([0, 6])//TODO:calculer la profondeur maximale
+                    .range(["hsl("+hsl.h+",80%,80%)", "hsl("+hsl.h+",30%,40%)"])
+                    .interpolate(d3.interpolateHcl)                
 
                 //Nested treemap
                 treemap = data => d3.treemap()
@@ -525,7 +523,6 @@ class jdc {
                     .sort((a, b) => b.value - a.value));
 
                 const root = treemap(p);
-                const colorPhy = d3.scaleOrdinal(d3.schemeCategory10)
                 
                 PhysiqueG[p.id]
                     .style("font", "10px sans-serif")
@@ -536,14 +533,14 @@ class jdc {
                   .join("g")
                     .attr("id", d => "physiqueNode_"+me.id+'_'+d.data.id)
                     .attr("transform", d => `translate(${d.x0},${d.y0})`)
-                    .on('click',showDetail);                        
+                    .on('click',clickDim);                        
 
                 node.append("title")
                     .text(d => `${d.ancestors().reverse().map(d => d.data['o:title']).join("/")}\n${format(d.value)}`);
               
                 node.append("rect")
                     .attr("id", d => d.nodeUid = "physiqueRect_"+me.id+'_'+d.data.id)
-                    .attr("fill", d => colorPhy(d.depth))
+                    .attr("fill", d => colors[d.data.id](d.depth))
                     .attr("width", d => d.x1 - d.x0)
                     .attr("height", d => d.y1 - d.y0);
               
@@ -575,7 +572,7 @@ class jdc {
 
 
         function addActants(){
-
+            if(!me.data.Actant.children.length)return;
             //récupère les clefs des actants
             let ActantKey = me.data.Actant.children.map(d => d.id);
             //attribution des couleurs
@@ -591,7 +588,7 @@ class jdc {
             , actantG = container.selectAll('.jdcActantG').data(me.data.Actant.children).enter()
                     .append('g').attr('id',d=>'jdcActantG_'+me.id+'_'+d.id).attr('class','jdcActantG')
                 .attr("transform", d => `translate(${actantBand(d.id)+actantBand.bandwidth()/2},${dimsBand('Actant')+dimsBand.bandwidth()/2})`)
-                .on('click',showDetail)
+                .on('click',clickDim)
             , hexbin = d3.hexbin()
                 .radius(dimsBand.bandwidth()/2);
             /*ajoute les intériorités
@@ -658,6 +655,7 @@ class jdc {
                     break;
                 default:
                     container.selectAll('.jdc'+q.dim+'G').remove();
+                    if(!me.data[q.dim].children)me.data[q.dim].children=[];
                     me.data[q.dim].children = me.data[q.dim].children.concat(r[q.dim]);
                     me.hierarchies[q.dim]= d3.hierarchy(me.data[q.dim]);        
                     eval('add'+q.dim+'s()');
@@ -666,17 +664,53 @@ class jdc {
         }
         this.clearExi = function(){
             container.selectAll('g').remove();
+            container.select('#ConceptEllipse_'+me.id).remove();
+            
             me.data = [];                    
         }
-  
-        function fctExecute(p) {
-            switch (p.data.fct) {
-                case 'addDimension':
-                    console.log(p);
-                    break;
-                default:
-                  console.log(p);
-            }            
+        
+        this.selectRapportDim = function(e,d){
+            if(!e){
+                rapportDims = [];
+                rdfTriplet.forEach(t=>rapportDims.push({'t':t,'d':false,'tt':false}));
+                dimSelect=0;
+                me.fctClickDim = me.selectRapportDim
+                toolTipAjoutRapport = $("#"+params.idCont).jBox('Mouse', {
+                    theme: 'TooltipDark',
+                    content: 'Choisissez un '+rapportDims[dimSelect].t
+                  });                
+            }
+            if(d){
+                let nDim = d3.select(e.currentTarget);
+                nDim.attr('style','animation:colorChange 1s infinite;');
+                rapportDims[dimSelect].d=d.data ? d.data : d;
+                rapportDims[dimSelect].tt=new jBox('Tooltip',{
+                    target: '#'+e.currentTarget.id,
+                    position: {
+                        x: 'center',
+                        y: 'top'
+                    },
+                    content:rapportDims[dimSelect].t       
+                  }).open();
+                if(dimSelect==rdfTriplet.length-1){
+                    me.fctClickDim = showDetail
+                    toolTipAjoutRapport.close({ignoreDelay: true});
+                    toolTipAjoutRapport.detach();
+                    let data = {'dcterms:title':'Rapport '};
+                    rapportDims.forEach(d => {
+                        d.tt.close();
+                        d.tt=false;
+                        data['dcterms:title'] += d.d['o:title'];
+                        data['jdc:has'+d.t] = [{'type':'resource','value':d.d.id}];
+                        
+                    });
+                    data['dcterms:title'] += " : "+Date.now();
+                    me.fctCreaDim(null,'Rapport',data);
+                }else{
+                    toolTipAjoutRapport.setContent('Choisissez un '+rapportDims[dimSelect+1].t);
+                    dimSelect++;
+                }
+            }
         }
 
         if(me.dataUrl){
