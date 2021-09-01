@@ -1,7 +1,7 @@
 <?php
 $item = $this->vars('item');
 $dim = $this->vars('dim');
-$itemsDim = $this->api()->search('items',['resource_class_label'=>$dim])->getContent();
+$itemsDims[$dim]=$this->api()->search('items',['resource_class_label'=>$dim])->getContent();
 $itemsAsDim = $item ? $item->value('jdc:has'.$dim, ['all' => true]) : [];
 
 $t = 1;
@@ -10,7 +10,7 @@ $t = 1;
 
 <form class="px-4 py-3">
     <div class="mb-3" id='dimSelector<?php echo $dim;?>'>
-        <?php foreach ($itemsDim as $i): ?>
+        <?php foreach ($itemsDims[$dim] as $i): ?>
         <div class="form-check" >
             <input type="checkbox" <?php echo itemChecked($itemsAsDim, $i);?>
             onchange='dimItemChange(<?php echo $this->json(['idDim'=>$i->id(),'idItem'=>($item ? $item->id() : 0),'dim'=>$dim]);?>)'
@@ -23,4 +23,6 @@ $t = 1;
         <?php endforeach; ?>
     </div>
 </form>
-
+<script>
+itemsDims['<?php echo $dim;?>'] = <?php echo json_encode($itemsDims[$dim]);?>
+</script>

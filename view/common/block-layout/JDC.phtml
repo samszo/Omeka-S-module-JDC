@@ -2,6 +2,7 @@
 $id =$this->params()->fromQuery('id', '');
 $item = $this->vars('item');
 $site = $this->vars('site');
+$itemsDims = [];
 
 ?>
 <div class="container" id="jdcMainContainer">
@@ -14,23 +15,28 @@ $site = $this->vars('site');
 </div>
 <?php echo $this->partial('JDC/modal_ajoutRapport');?>
 
-
-
 <script>
-  contDim = d3.select('#jdcGraph<?php echo $id;?>').node().getBoundingClientRect();    
+
   window.onload = function() {
+    contDim = d3.select('#jdcGraph<?php echo $id;?>').node().getBoundingClientRect();
+    //gestion du menu contextuel
+    mnuContextCont = d3.select('body').append('div')
+      .attr('id','jdcMenuContext<?php echo $id;?>')
+      .style('position','absolute');
+    mnuContextShow(contDim.left-mnuContextWidth/2+contDim.width/2, contDim.top+mnuContextWidth/2, mnuContextData.start);
+
     //ajouter le JDC 
-    oJDC = new jdc({'idCont':'jdcGraph<?php echo $id;?>','width':contDim.width,'height':600,'fctCreaDim':createDim});
+    oJDC = new jdc({'idCont':'jdcGraph<?php echo $id;?>','width':contDim.width,'height':600
+      ,'fctCreaDim':createDim,'fctClickDim':mnuContextInit, 'apiUrl':urlAjax});
     //gestion des tooltip
     toolTipAide = new jBox('Tooltip',{
-      target: '#navItemJDCExistence',
+      target: '#jdcMenuContext<?php echo $id;?>',
       position: {
           x: 'center',
           y: 'top'
       },
       content:'Pour commencer créer ou sélectionner une existence'       
-    }).open();
-        
+    }).open();        
     //gestion des modals
     modalAjoutRapport = new bootstrap.Modal(document.getElementById('modalAjoutRapport'));
 

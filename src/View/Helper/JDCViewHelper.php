@@ -41,6 +41,9 @@ class JDCViewHelper extends AbstractHelper
         case 'removeDim':
           $rs = $this->removeDim($data['params']);
           break;      
+        case 'listeDim':
+          $rs = $this->listeDim($data['params']);
+          break;      
         default:
           $rs = [];
           break;
@@ -48,6 +51,31 @@ class JDCViewHelper extends AbstractHelper
       return $rs;
 
     }
+
+    function listeDim($params){
+
+      $itemsDims=$this->api->search('items',['resource_class_label'=>$params['dim']])->getContent();
+      $itemsAsDim = [];
+      $rs = [];
+      if($params['idExi']){
+        $oDim = $this->api->read('items', $params['idExi'])->getContent();
+        $itemsAsDim = $oDim->value('jdc:has'.$params['dim'], ['all' => true]);
+      }
+      foreach ($itemsDims as $dim) {
+        $vDim = $this->setPropForIHM($dim);
+        $vDim['isInExi']=$this->isInExi($itemsAsDim, $dim);
+        $rs[]=$vDim;
+      }
+      return $rs;
+    }
+
+    function isInExi($listItem, $item){
+        foreach ($listItem as $i) {
+            if($i->id()==$item->id()) return 1;
+        }
+        return 0;
+    }
+
 
     function appendDim($params){
 
@@ -72,8 +100,7 @@ class JDCViewHelper extends AbstractHelper
           $children=$this->childrenDim($oDim,'jdc:has'.$params['dim']);
           break;
       }
-      $vDim = $oDim->getJsonLd();
-      $vDim = $this->setPropForIHM($vDim, $oDim);
+      $vDim = $this->setPropForIHM($oDim);
       if($children)$vDim['id']['children']=$children;
       if($nodes)$vDim['nodes'] = $nodes;
       $rs[$params['dim']][]=$vDim;
@@ -104,8 +131,7 @@ class JDCViewHelper extends AbstractHelper
       $itemsAsDim = $r->value($propAs, ['all' => true]);
       foreach ($itemsAsDim as $iDim) {
         $rDim = $iDim->valueResource();
-        $vDim = $rDim->getJsonLd();//json_decode(json_encode($rDim),true)
-        $vDim = $this->setPropForIHM($vDim, $rDim);
+        $vDim = $this->setPropForIHM($rDim);
         if($getChild)$vDim['children'] = $this->childrenDim($rDim, $propAs);
         if($propAs=='jdc:hasRapport')$vDim['nodes'] = $this->getRapportNodes($rDim);
         $children[]=$vDim;
@@ -113,8 +139,10 @@ class JDCViewHelper extends AbstractHelper
       return $children;
     }
     
-    function setPropForIHM($v, $r){
+    function setPropForIHM($r){
+      $v = $r->getJsonLd();
       $v['id'] = $r->id();
+      $v['dim'] = $r->resourceClass()->label();
       $v['value'] = 1;//nécessaire pour d3.pack()
       $v['adminUrl'] = $r->adminUrl();
       $v['siteUrl'] = $r->siteUrl();
@@ -153,10 +181,9 @@ class JDCViewHelper extends AbstractHelper
         $params['idDim']=$oDim->id();
         $rs = $this->appendDim($params);
       }else{
-        $vDim = $oDim->getJsonLd();
-        $rs['Existence'][] = $this->setPropForIHM($vDim, $oDim);
+        $rs['Existence'][] = $this->setPropForIHM($oDim);
         foreach ($this->exiDims as $dim) {
-          $rs[$dim]=[];
+          $rs[$dim]['children']=[];
         }
       }
 

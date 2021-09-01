@@ -2,27 +2,26 @@
 urlAjax est défini dans le thème omeka S : JDC
 */
 
-let oJDC, contDim, toolTipAide, modalAjoutRapport;
+let oJDC=new jdc({}), contDim, toolTipAide, modalAjoutRapport, modalSelectDim;
 
 function dimItemChange(dt){
     dt.checked=this.event.target.checked;
-    if(!dt.checked && dt.dim=='Existence'){
-        oJDC.clearExi();
-        return
-    }
     dt.action=dt.checked ? 'appendDim' : 'removeDim';
     dt.idExi = oJDC.idExi; 
+    dimSaveChange(dt);    
+}
+function dimSaveChange(dt){
     //gestion du loading
     d3.select('#dimItemSpin'+dt.idDim).style('display','block');
     $.ajax({
-          type: 'POST',
-          dataType: 'json',
-          url: urlAjax,
-          data: dt,
+        type: 'POST',
+        dataType: 'json',
+        url: urlAjax,
+        data: dt,
     }).done(function(data) {
         console.log(data);        
         d3.select('#dimItemSpin'+dt.idDim).style('display','none');
-        if(!dt.checked){
+        if(dt.action=='removeDim'){
             oJDC.removeDim(dt, data);
         }else{
             oJDC.appendDim(dt, data);
@@ -40,15 +39,17 @@ function dimItemChange(dt){
             }
             //ferme l'aide
             toolTipAide.close();
-
+            //nécessaire avec le modal
+            modalSelectDim.destroy();
+            mnuContextRemove()
         } 
     })
     .fail(function(e) {
         console.log(e);
         d3.select('#dimItemSpin'+dt.idDim).style('display','none');
-    });
-
+    });    
 }
+
 function appendDimSelector(rs,idExi){
     //ajoute l'item dans le menu
     for (const dim in rs) {
@@ -87,8 +88,10 @@ function createDim(id, dim, data){
     })
     .done(function(rs) {
         console.log(rs);
-        appendDimSelector(rs,dim=="Existence" ? null : oJDC.idExi)
         oJDC.appendDim(dt, rs);
+        if(dim=="Rapport")oJDC.clearRapportDim();
+        /*nécessaire avec le menu 
+        //appendDimSelector(rs,dim=="Existence" ? null : oJDC.idExi)
         //active les menus
         if(dim=="Existence"){
             Object.keys(rs).forEach(d=>{
@@ -96,6 +99,9 @@ function createDim(id, dim, data){
             });
         }
         d3.select('#ajoutItemSpin'+dim).style('display','none');
+        */
+       //nécessaire avec le modal
+       mnuContextRemove();
     })
     .fail(function(e) {
         console.log("error = "+JSON.stringify(e));
