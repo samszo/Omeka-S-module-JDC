@@ -71,7 +71,7 @@ class JDCViewHelper extends AbstractHelper
 
     function isInExi($listItem, $item){
         foreach ($listItem as $i) {
-            if($i->id()==$item->id()) return 1;
+            if($i->valueResource()->id()==$item->id()) return 1;
         }
         return 0;
     }
@@ -93,7 +93,7 @@ class JDCViewHelper extends AbstractHelper
         case 'Rapport':
           $oDim = $this->addDimToExi($params);
           $nodes = $this->getRapportNodes($oDim);
-          //ajoute les dimensions à l'existence si elles n'existent pas          
+          //TODO:ajoute les dimensions à l'existence si elles n'existent pas          
           break;
         default:
           $oDim = $this->addDimToExi($params);
@@ -146,6 +146,7 @@ class JDCViewHelper extends AbstractHelper
       $v['value'] = 1;//nécessaire pour d3.pack()
       $v['adminUrl'] = $r->adminUrl();
       $v['siteUrl'] = $r->siteUrl();
+      $v['apiUrl'] = $r->apiUrl();
       return $v;
     }
 
@@ -155,12 +156,29 @@ class JDCViewHelper extends AbstractHelper
         $oDim = $this->api->read('items', $params['idExi'])->getContent();
         $newValue = json_decode(json_encode($oDim), true);
         $dims=$this->childrenDim($oDim,$oP->term(),false);
+        //modifie les dimensions de l'existence
         $newValue[$oP->term()]=[];
         foreach ($dims as $d) {
           if($params['idDim']!=$d['id'])$newValue[$oP->term()][]=['value_resource_id' => $d['id'],'property_id' => $oP->id(),'type' => 'resource'];
         }        
+        //supprime les rapports correspondant
+        $oPR = $this->api->search('properties', ['term' => 'jdc:hasRapport'])->getContent()[0];
+        $rapports=$this->childrenDim($oDim,$oPR->term(),false);
+        $newValue[$oPR->term()]=[];
+        $rs = [];
+        foreach ($rapports as $r) {
+          $delR = false;
+          foreach ($r['nodes'] as $n) {
+            if($n['id']==$params['idDim'])$delR=true;
+          }
+          if(!$delR)$newValue[$oPR->term()][]=['value_resource_id' => $r['id'],'property_id' => $oPR->id(),'type' => 'resource'];
+          else $rs[]=$r;
+        }
+        //met à jour l'existence
         $this->api->update('items', $params['idExi']
           , $newValue, [], ['isPartial' => true,'collectionAction' => 'replace']);
+        //renvoie la liste des rapports supprimés
+        return $rs;
     }
 
     function createDim($params){

@@ -6,19 +6,19 @@ let mnuContext, mnuContextCont, mnuContextWidth = 250
       children: [{
         name: 'Existence',
         id: 11,
-        color: 'green',
+        color: 'white',
         value: 0,
         children: [{
           name: 'Créer',
           id: 111,
-          color: 'yellow',
+          color: 'orange',
           fct: mnuCreateDim,
           dim: 'Existence',
           value: 1
         }, {
-          name: 'Sélectionner',
+          name: 'Choisir',
           id: 112,
-          color: 'red',
+          color: 'green',
           value: 1,
           dim: 'Existence',
           fct: showListeDim
@@ -34,6 +34,33 @@ let mnuContext, mnuContextCont, mnuContextWidth = 250
           color: 'white',
           value: 0,
             children: [{
+              name: 'Admin',
+              id: 1,
+              color:'#404E61',
+              fct: 'showDetail',
+              dim: 'Existence',
+              value: 1
+            },{
+              name: 'Existence',
+              id: 10,
+              color: 'black',
+              value: 0,
+              children: [{
+                name: 'Choisir',
+                id: 102,
+                color: 'green',
+                value: 1,
+                dim: 'Existence',
+                fct: showListeDim
+              },{
+                name: 'Créer',
+                id: 101,
+                color: 'orange',
+                fct: mnuCreateDim,
+                dim: 'Existence',
+                value: 1
+              }]
+            },{
               name: 'Physique',
               id: 11,
               color: 'black',
@@ -41,12 +68,12 @@ let mnuContext, mnuContextCont, mnuContextWidth = 250
               children: [{
                 name: 'Créer',
                 id: 111,
-                color: 'yellow',
+                color: 'orange',
                 fct: mnuCreateDim,
                 dim: 'Physique',
                 value: 1
               }, {
-                name: 'Sélectionner',
+                name: 'Choisir',
                 id: 112,
                 color: 'green',
                 value: 1,
@@ -61,12 +88,12 @@ let mnuContext, mnuContextCont, mnuContextWidth = 250
               children: [{
                 name: 'Créer',
                 id: 211,
-                color: 'yellow',
+                color: 'orange',
                 fct: mnuCreateDim,
                 dim: 'Actant',
                 value: 1
               }, {
-                name: 'Sélectionner',
+                name: 'Choisir',
                 id: 212,
                 color: 'green',
                 value: 1,
@@ -81,12 +108,12 @@ let mnuContext, mnuContextCont, mnuContextWidth = 250
               children: [{
                 name: 'Créer',
                 id: 311,
-                color: 'yellow',
+                color: 'orange',
                 fct: mnuCreateDim,
                 dim: 'Concept',
                 value: 1
               }, {
-                name: 'Sélectionner',
+                name: 'Choisir',
                 id: 312,
                 color: 'green',
                 value: 1,
@@ -101,7 +128,7 @@ let mnuContext, mnuContextCont, mnuContextWidth = 250
               children: [{
                 name: 'Créer',
                 id: 411,
-                color: 'yellow',
+                color: 'orange',
                 fct: mnuCreateDim,
                 dim: 'Rapport',
                 value: 1
@@ -126,9 +153,9 @@ let mnuContext, mnuContextCont, mnuContextWidth = 250
               dim: 'Existence',
               value: 1
             }, {
-              name: 'Infos',
+              name: 'Admin',
               id: 111,
-              color: 'blue',
+              color:'#404E61',
               fct: 'showDetail',
               dim: 'Existence',
               value: 1
@@ -139,14 +166,25 @@ let mnuContext, mnuContextCont, mnuContextWidth = 250
               value: 1,
               dim: 'Existence',
               fct: 'removeDim'
-            }, {
-              name: 'Supprimer',
-              id: 113,
-              color: 'red',
-              value: 1,
-              dim: 'Existence',
-              fct: 'removeDim'
             }]
+          }]
+        },
+        "Générateur": {
+          name: 'Générateur',
+          color: 'white',
+          children: [{
+            name: 'Paramétrer',
+            id: 50,
+            color: 'green',
+            fct: console.log,
+            value: 1
+            }, {
+            name: 'Générer',
+            id: 51,
+            color:'orange',
+            fct: console.log,
+            dim: 'Existence',
+            value: 1
           }]
         }
       };
@@ -168,7 +206,7 @@ function mnuContextClick(d){
     switch (d.fct) {
       case 'removeDim':
         let dt={'checked':false,
-        'idDim':d.slct.data.id,
+        'idDim':d.slt.data ? d.slt.data.id : d.slt.id,
         'idItem':0,
         'dim':d.dim,
         'action':'removeDim',
@@ -193,22 +231,30 @@ function mnuContextInit(e,d){
   let dt = d.data ? d.data : d;
   if(dt.dim=='Existence'){
     mnuContextData.existence.children[0].name=dt['o:title'];
+    mnuContextData.existence.children[0].children[0].slt = d;
     mnuContextShow(e.offsetX, e.offsetY, mnuContextData.existence);
   }else{
-    mnuContextData.dim.children[0].name=dt['o:title'];
-    mnuContextData.dim.children[0].color=d.color;
-    mnuContextData.dim.children[0].children.forEach((m,i)=>{
+    let mnuData = mnuContextData.dim;
+    mnuData.children[0].name=dt['o:title'];
+    mnuData.children[0].color=d.color;
+    //ajoute les menus de l'item
+    if(dt["jdc:hasMenu"]){
+      dt["jdc:hasMenu"].forEach(m=>{
+        mnuData.children[0].children.push(mnuContextData[m["@value"]]);
+      })
+    }
+    mnuData.children[0].children.forEach((m,i)=>{
       m.dim=dt.dim;
       m.slt = d;
     });
-    mnuContextShow(e.offsetX, e.offsetY, mnuContextData.dim);
+    mnuContextShow(e.offsetX, e.offsetY, mnuData);
   }
 }
 
 function showListeDim(d){
   console.log(d);
   modalSelectDim  = new jBox('Modal', {
-      title: d.dim == 'Existence' ? 'Sélectionner une existence' : 'Sélectionner des '+d.dim+'s',
+      title: d.dim == 'Existence' ? 'Choisir une existence' : 'Choisir des dimensions '+d.dim+'s',
       overlay: false,
       draggable: 'title',
       repositionOnOpen: true,

@@ -10,6 +10,8 @@ class jdc {
         this.apiUrl = params.apiUrl ? params.apiUrl : false;
         this.fctClickDim = this.fctClickDimDef = params.fctClickDim ? params.fctClickDim : me.showDetail;
         this.fctCreaDim = params.fctCreaDim ? params.fctCreaDim : console.log;
+        this.fctUpdateDim = params.fctUpdateDim ? params.fctUpdateDim : console.log;
+
         this.data = params.data ? params.data : false;
         this.hierarchies = {};
         this.dataTest = {
@@ -122,7 +124,9 @@ class jdc {
         }; 
 
         let svg, svgBBox, container, dimsBand, physiqueBand, conceptBand
-            , toolTipAjoutRapport, dimSelect, rdfTriplet = ['Sujet', 'Objet', 'Predicat'], rapportDims=[];            
+            , toolTipAjoutRapport, dimSelect
+            , rdfTriplet = [{'t':'Sujet','dim':'Actant'}, {'t':'Objet','dim':'Physique'}, {'t':'Predicat','dim':'Concept'}]
+            , rapportDims=[];            
 
         this.init = function () {
             d3.select('#svg'+me.id).remove();
@@ -218,8 +222,9 @@ class jdc {
 
         this.showDetail = function(e,d){
             console.log(e,d);
+            let dt = d.data ? d.data : d;
             if(!d.modal){
-                let t = e.currentTarget.id ? e.currentTarget.id : 'jdcDim_'+me.id+'_'+d.data.id;
+                let t = e.currentTarget.id ? e.currentTarget.id : 'jdcDim_'+me.id+'_'+dt.id;
                 //merci à https://stephanwagner.me/jBox/documentation
                 d.modal = new jBox('Modal', {
                     title: '---',
@@ -232,8 +237,12 @@ class jdc {
                         x: 'left',
                         y: 'top'
                     },
-                    title:d.data ? d.data['o:title'] : d['o:title'],
-                    content:getModalContent(d)
+                    title:dt['o:title'],
+                    content:getModalContent(d),
+                    onCloseComplete:function(){
+                        //met à jour les infos
+                        me.fctUpdateDim(dt);
+                    }
                 })
             }
             d.modal.open();            
@@ -252,7 +261,7 @@ class jdc {
             me.idExi = me.data.Existence[0].id;
             let fs = 32;
             let existenceG = container.selectAll('.jdcExitenceG').data(me.data.Existence).enter()
-                .append('g').attr('id',e=>'jdcExistenceG_'+me.id+'_'+e.id).attr('class','jdcExitenceG')
+                .append('g').attr('id',e=>'jdcDim_'+me.id+'_'+e.id).attr('class','jdcExitenceG')
                 .attr("transform", `translate(0,${fs})`)
                 .on('click',me.fctClickDim);
             let existenceT = existenceG.append('text')
@@ -330,7 +339,7 @@ class jdc {
 
                 
             let RapportG = container.selectAll('.jdcRapportG').data(me.data.Rapport.children).enter()
-                .append('g').attr('id',r=>'jdcRapportG_'+me.id+'_'+r.id).attr('class','jdcRapportG')
+                .append('g').attr('id',r=>'jdcDim_'+me.id+'_'+r.id).attr('class','jdcRapportG')
                 .attr("transform", `translate(${-svgBBox.x},${-svgBBox.y})`)
                 .on('click',clickDim);
                 
@@ -436,7 +445,7 @@ class jdc {
                     .range(["hsl("+hsl.h+",80%,80%)", "hsl("+hsl.h+",30%,40%)"])
                     .interpolate(d3.interpolateHcl)                
                 //ajoute le group de concept
-                conceptG[c.id] = container.append('g').attr('id','jdcConceptG_'+me.id+'_'+c.id).attr('class','jdcConceptG');
+                conceptG[c.id] = container.append('g').attr('id','jdcDim_'+me.id+'_'+c.id).attr('class','jdcConceptG');
 
                 //simple circle packing
                 const format = d3.format(",d")    
@@ -505,7 +514,7 @@ class jdc {
             , treemap           
             , PhysiqueG=[], colors=[];
             me.data.Physique.children.forEach(p=>{
-                PhysiqueG[p.id]=container.append('g').attr('id','jdcPhysiqueG_'+me.id+'_'+p.id).attr('class','jdcPhysiqueG');
+                PhysiqueG[p.id]=container.append('g').attr('id','jdcDim_'+me.id+'_'+p.id).attr('class','jdcPhysiqueG');
                 const hsl = d3.hsl(PhysiqueColor([p.id]));
                 colors[p.id] = d3.scaleLinear()
                     .domain([0, 6])//TODO:calculer la profondeur maximale
@@ -643,11 +652,13 @@ class jdc {
         }
         this.removeDim = function(q, r){
             console.log('removeDim',[q,r]);
-            container.select('#jdc'+q.dim+'G_'+me.id+'_'+q.idDim).remove();
+            container.select('#jdcDim_'+me.id+'_'+q.idDim).remove();
             for (let index = 0; index < me.data[q.dim].children.length; index++) {
                 if (me.data[q.dim].children[index].id==q.idDim)me.data[q.dim].children.splice(index,1);
             }
-            me.hierarchies[q.dim]= d3.hierarchy(me.data[q.dim]);        
+            me.hierarchies[q.dim]= d3.hierarchy(me.data[q.dim]);
+            //supprime les rapports supprimés
+            r.forEach(n=>container.select('#jdcDim_'+me.id+'_'+n.id).remove());        
         }
         this.appendDim = function(q, r){
             console.log('appendDim',[q, r]);
@@ -680,27 +691,33 @@ class jdc {
         this.selectRapportDim = function(e,d){
             if(!e){
                 rapportDims = [];
-                rdfTriplet.forEach(t=>rapportDims.push({'t':t,'d':false,'tt':false}));
+                rdfTriplet.forEach(t=>rapportDims.push({'rdf':t,'d':false,'tt':false}));
                 dimSelect=0;
                 me.fctClickDim = me.selectRapportDim
                 toolTipAjoutRapport = $("#"+params.idCont).jBox('Mouse', {
                     theme: 'TooltipDark',
-                    content: 'Choisissez un '+rapportDims[dimSelect].t
+                    content: 'Choisissez un '+rapportDims[dimSelect].rdf.dim
                   });                
             }
-            if(d){
+            if(d){                
                 let nDim = d3.select(e.currentTarget);
+                let dt = d.data ? d.data : d
                 nDim.attr('style','animation:colorChange 1s infinite;');
                 rapportDims[dimSelect].node = nDim;
-                rapportDims[dimSelect].d=d.data ? d.data : d;
-                rapportDims[dimSelect].tt=new jBox('Tooltip',{
-                    target: '#'+e.currentTarget.id,
-                    position: {
-                        x: 'center',
-                        y: 'top'
-                    },
-                    content:rapportDims[dimSelect].t       
-                  }).open();
+                rapportDims[dimSelect].d=dt;
+                if(!rapportDims[dimSelect].tt){
+                    rapportDims[dimSelect].tt=new jBox('Tooltip',{
+                        target: '#'+e.currentTarget.id,
+                        position: {
+                            x: 'center',
+                            y: 'top'
+                        },
+                        content:rapportDims[dimSelect].rdf.t       
+                      }).open();    
+                }else{
+                    rapportDims[dimSelect].tt.setContent(rapportDims[dimSelect].rdf.t)
+                    rapportDims[dimSelect].tt.open({target: $('#'+e.currentTarget.id)});
+                }
                 if(dimSelect==rdfTriplet.length-1){
                     me.fctClickDim = me.fctClickDimDef
                     toolTipAjoutRapport.close({ignoreDelay: true});
@@ -710,13 +727,19 @@ class jdc {
                         d.tt.close();
                         d.tt=false;
                         data['dcterms:title'] += d.d['o:title'];
-                        data['jdc:has'+d.t] = [{'type':'resource','value':d.d.id}];                                                
+                        data['jdc:has'+d.rdf.t] = [{'type':'resource','value':d.d.id}];                                                
                     });
                     data['dcterms:title'] += " : "+Date.now();
                     me.fctCreaDim(null,'Rapport',data);
                 }else{
-                    toolTipAjoutRapport.setContent('Choisissez un '+rapportDims[dimSelect+1].t);
-                    dimSelect++;
+                    //vérifie que la sélection est bien du type demandé
+                    if(dt.dim!=rapportDims[dimSelect].rdf.dim){
+                        nDim.attr('style','');
+                        rapportDims[dimSelect].tt.setContent("Ceci n'est pas un : "+rapportDims[dimSelect].rdf.dim);
+                    }else{
+                        toolTipAjoutRapport.setContent('Choisissez un '+rapportDims[dimSelect+1].rdf.dim);
+                        dimSelect++;    
+                    }
                 }
             }
         }

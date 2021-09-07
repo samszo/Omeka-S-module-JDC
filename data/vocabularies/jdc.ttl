@@ -168,3 +168,7 @@ jdc:hasPredicat a rdf:Property ;
     rdfs:label "a comme prédicat" ;
     rdfs:domain o:Resource ;
     vs:term_status "experimental" .
+jdc:hasMenu a rdf:Property ;
+    rdfs:label "a comme menu" ;
+    rdfs:domain o:Resource ;
+    vs:term_status "experimental" .

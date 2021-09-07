@@ -14,6 +14,7 @@ $itemsDims = [];
     </div>
 </div>
 <?php echo $this->partial('JDC/modal_ajoutRapport');?>
+<?php echo $this->partial('JDC/modal_patienter');?>
 
 <script>
 
@@ -27,7 +28,8 @@ $itemsDims = [];
 
     //ajouter le JDC 
     oJDC = new jdc({'idCont':'jdcGraph<?php echo $id;?>','width':contDim.width,'height':600
-      ,'fctCreaDim':createDim,'fctClickDim':mnuContextInit, 'apiUrl':urlAjax});
+      ,'fctCreaDim':createDim,'fctClickDim':mnuContextInit, 'fctUpdateDim':updateDim
+      , 'apiUrl':urlAjax});
     //gestion des tooltip
     toolTipAide = new jBox('Tooltip',{
       target: '#jdcMenuContext<?php echo $id;?>',
@@ -39,6 +41,7 @@ $itemsDims = [];
     }).open();        
     //gestion des modals
     modalAjoutRapport = new bootstrap.Modal(document.getElementById('modalAjoutRapport'));
+    modalPatienter = new bootstrap.Modal(document.getElementById('modalPatienter'));
 
   };
 

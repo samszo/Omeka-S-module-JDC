@@ -36,13 +36,12 @@ function dimSaveChange(dt){
                         });
                     });                                  
                 }); 
+                modalSelectDim.destroy();
             }
             //ferme l'aide
             toolTipAide.close();
-            //nécessaire avec le modal
-            modalSelectDim.destroy();
-            mnuContextRemove()
         } 
+        mnuContextRemove();
     })
     .fail(function(e) {
         console.log(e);
@@ -106,6 +105,34 @@ function createDim(id, dim, data){
     .fail(function(e) {
         console.log("error = "+JSON.stringify(e));
         d3.select('#ajoutItemSpin'+dim).style('display','none');
+    });
+
+}
+function updateDim(dt){
+    modalPatienter.show();
+    $.ajax({
+        dataType: 'json',
+        url: dt.apiUrl,
+    })
+    .done(function(rs) {
+        console.log(rs);
+        //vérifie la modification 
+        if(dt["o:modified"]["@value"]!=rs["o:modified"]["@value"]){
+            //recharge l'existence
+            dimSaveChange({
+                action: "appendDim",
+                checked: true,
+                dim: "Existence",
+                idDim: oJDC.idExi,
+                idExi: oJDC.idExi,
+                idItem: oJDC.idExi
+            });
+        }
+        modalPatienter.hide();
+    })
+    .fail(function(e) {
+        console.log("error = "+JSON.stringify(e));
+        modalPatienter.hide();
     });
 
 }
