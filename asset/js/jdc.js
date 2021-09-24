@@ -11,7 +11,7 @@ class jdc {
         this.fctClickDim = this.fctClickDimDef = params.fctClickDim ? params.fctClickDim : me.showDetail;
         this.fctCreaDim = params.fctCreaDim ? params.fctCreaDim : console.log;
         this.fctUpdateDim = params.fctUpdateDim ? params.fctUpdateDim : console.log;
-
+        this.forceActant = false;
         this.data = params.data ? params.data : false;
         this.hierarchies = {};
         this.dataTest = {
@@ -126,7 +126,7 @@ class jdc {
         let svg, svgBBox, container, dimsBand, physiqueBand, conceptBand
             , toolTipAjoutRapport, dimSelect
             , rdfTriplet = [{'t':'Sujet','dim':'Actant'}, {'t':'Objet','dim':'Physique'}, {'t':'Predicat','dim':'Concept'}]
-            , rapportDims=[];            
+            , rapportDims=[], fontSize = 16;            
 
         this.init = function () {
             d3.select('#svg'+me.id).remove();
@@ -502,14 +502,11 @@ class jdc {
             let PhysiqueKey = me.data.Physique.children.map(d=>d.id);
             physiqueBand = d3.scaleBand()
                 .domain(PhysiqueKey)
-                .paddingInner(0.5) // edit the inner padding value in [0,1]
+                .paddingInner(0.1) // edit the inner padding value in [0,1]
                 .paddingOuter(0.5) // edit the outer padding value in [0,1]                
                 .range([0, me.width])
                 .align(0.5);            
-            let x = d3.scaleLinear()
-            , y = d3.scaleLinear().rangeRound([dimsBand('Physique')+30, dimsBand.bandwidth()])
-            , name = d => d.ancestors().reverse().map(d => d.data['o:title']).join("/")          
-            , format = d3.format(",d")
+            let format = d3.format(",d")
             , PhysiqueColor = d3.scaleOrdinal(PhysiqueKey, d3.schemeTableau10)
             , treemap           
             , PhysiqueG=[], colors=[];
@@ -525,7 +522,7 @@ class jdc {
                 treemap = data => d3.treemap()
                     .size([physiqueBand.bandwidth(), dimsBand.bandwidth()]) 
                     .paddingOuter(3)
-                    .paddingTop(19)
+                    .paddingTop(30)
                     .paddingInner(1)
                     .round(true)
                 (d3.hierarchy(data)
@@ -535,7 +532,7 @@ class jdc {
                 const root = treemap(p);
                 
                 PhysiqueG[p.id]
-                    .style("font", "10px sans-serif")
+                    .attr("style","font-family:Times New Roman;font-size:"+fontSize+"px;")
                     .attr("transform", `translate(${physiqueBand(p.id)},${dimsBand('Physique')})`);
               
                 const node = PhysiqueG[p.id].selectAll("g")
@@ -551,25 +548,29 @@ class jdc {
                 node.append("rect")
                     .attr("id", d => d.nodeUid = "physiqueRect_"+me.id+'_'+d.data.id)
                     .attr("fill", d => {
-                        d.color = colors[d.data.id](d.depth);
+                        d.color = colors[d.ancestors()[d.depth].data.id](d.depth);
                         return d.color;
                     })
                     .attr("width", d => d.x1 - d.x0)
                     .attr("height", d => d.y1 - d.y0);
-              
+                            
                 node.append("clipPath")
                     .attr("id", d => d.clipUid = "physiqueClip_"+me.id+'_'+d.data.id)
                   .append("use")
                     .attr("xlink:href", d => "#"+d.nodeUid);
-              
+
                 node.append("text")
                     .attr("clip-path", d => d.clipUid)
                   .selectAll("tspan")
-                  .data(d => d.data['o:title'].split(/(?=[A-Z][^A-Z])/g))
+                  .data(d => {
+                      return wrapLabel(d.data['o:title'], d.x1 - d.x0);
+                  })
                   .join("tspan")
-                    .attr("fill-opacity", (d, i, nodes) => i === nodes.length - 1 ? 0.7 : null)
-                    .text(d => d);
-              
+                  .text(d => d);
+                  /*
+                    .attr("fill-opacity", (d, i, nodes) => {
+                        return i === nodes.length - 1 ? 0.7 : null
+                    })
                 node.filter(d => d.children).selectAll("tspan")
                     .attr("dx", 3)
                     .attr("y", 13);
@@ -577,12 +578,70 @@ class jdc {
                 node.filter(d => !d.children).selectAll("tspan")
                     .attr("x", 3)
                     .attr("y", (d, i, nodes) => `${(i === nodes.length - 1) * 0.3 + 1.1 + i * 0.9}em`);
+                */
+                node.selectAll("tspan")
+                .attr("x", 3)
+                .attr("y", (d, i, nodes) => `${(i === nodes.length - 1) * 0.3 + 1.1 + i * 0.9}em`);
+
 
               })    
 
       
         }
 
+        function getTextWidth(text, font = fontSize+"px Times New Roman") {
+            const canvas = document.createElement("canvas");
+            const context = canvas.getContext("2d");
+            context.font = font;
+            return context.measureText(text).width;
+          }
+          
+          function breakString(word, maxWidth, hyphenCharacter='-') {
+            const characters = word.split("");
+            const lines = [];
+            let currentLine = "";
+            characters.forEach((character, index) => {
+              const nextLine = `${currentLine}${character}`;
+              const lineWidth = getTextWidth(nextLine);
+              if (lineWidth >= maxWidth) {
+                const currentCharacter = index + 1;
+                const isLastLine = characters.length === currentCharacter;
+                const hyphenatedNextLine = `${nextLine}${hyphenCharacter}`;
+                lines.push(isLastLine ? nextLine : hyphenatedNextLine);
+                currentLine = "";
+              } else {
+                currentLine = nextLine;
+              }
+            });
+            return { hyphenatedStrings: lines, remainingWord: currentLine };
+          }
+          
+          function wrapLabel(label, maxWidth) {
+            if(!label)return[];
+            const words = label.split(" ");
+            const completedLines = [];
+            let nextLine = "";
+            words.forEach((word, index) => {
+              const wordLength = getTextWidth(`${word} `);
+              const nextLineLength = getTextWidth(nextLine);
+              if (wordLength > maxWidth) {
+                const { hyphenatedStrings, remainingWord } = breakString(word, maxWidth);
+                completedLines.push(nextLine, ...hyphenatedStrings);
+                nextLine = remainingWord;
+              } else if (nextLineLength + wordLength >= maxWidth) {
+                completedLines.push(nextLine);
+                nextLine = word;
+              } else {
+                nextLine = [nextLine, word].filter(Boolean).join(" ");
+              }
+              const currentWord = index + 1;
+              const isLastWord = currentWord === words.length;
+              if (isLastWord) {
+                completedLines.push(nextLine);
+              }
+            });
+            return completedLines.filter(line => line !== "");
+          }          
 
         function addActants(){
             if(!me.data.Actant.children.length)return;
@@ -694,12 +753,16 @@ class jdc {
                 rdfTriplet.forEach(t=>rapportDims.push({'rdf':t,'d':false,'tt':false}));
                 dimSelect=0;
                 me.fctClickDim = me.selectRapportDim
+                if(me.forceActant && rapportDims[dimSelect].rdf.dim=='Actant'){
+                    rapportDims[dimSelect].d=me.forceActant;
+                    dimSelect++;    
+                }
                 toolTipAjoutRapport = $("#"+params.idCont).jBox('Mouse', {
                     theme: 'TooltipDark',
                     content: 'Choisissez un '+rapportDims[dimSelect].rdf.dim
                   });                
             }
-            if(d){                
+            if(d){
                 let nDim = d3.select(e.currentTarget);
                 let dt = d.data ? d.data : d
                 nDim.attr('style','animation:colorChange 1s infinite;');
@@ -722,14 +785,16 @@ class jdc {
                     me.fctClickDim = me.fctClickDimDef
                     toolTipAjoutRapport.close({ignoreDelay: true});
                     toolTipAjoutRapport.detach();
-                    let data = {'dcterms:title':'Rapport '};
+                    let data = {'dcterms:title':'Rapport : '};
                     rapportDims.forEach(d => {
-                        d.tt.close();
-                        d.tt=false;
-                        data['dcterms:title'] += d.d['o:title'];
+                        if(d.tt){
+                            d.tt.close();
+                            d.tt=false;    
+                        }
+                        data['dcterms:title'] += d.d['o:title']+' - ';
                         data['jdc:has'+d.rdf.t] = [{'type':'resource','value':d.d.id}];                                                
                     });
-                    data['dcterms:title'] += " : "+Date.now();
+                    data['dcterms:title'] += Date.now();
                     me.fctCreaDim(null,'Rapport',data);
                 }else{
                     //vérifie que la sélection est bien du type demandé
@@ -737,14 +802,18 @@ class jdc {
                         nDim.attr('style','');
                         rapportDims[dimSelect].tt.setContent("Ceci n'est pas un : "+rapportDims[dimSelect].rdf.dim);
                     }else{
-                        toolTipAjoutRapport.setContent('Choisissez un '+rapportDims[dimSelect+1].rdf.dim);
                         dimSelect++;    
+                        if(me.forceActant && rapportDims[dimSelect].rdf.dim=='Actant'){
+                            rapportDims[dimSelect].d=me.forceActant;
+                            dimSelect++;    
+                        }
+                        toolTipAjoutRapport.setContent('Choisissez un '+rapportDims[dimSelect].rdf.dim);
                     }
                 }
             }
         }
         this.clearRapportDim = function(){
-            rapportDims.forEach(d => d.node.attr('style',''));
+            rapportDims.forEach(d => {if(d && d.node)d.node.attr('style','')});
         }
 
         if(me.dataUrl){

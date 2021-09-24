@@ -84,13 +84,18 @@ class JDC extends AbstractBlockLayout
         $view->headScript()->appendFile($view->assetUrl('js/d3.min.js','JDC'));
         $view->headScript()->appendFile($view->assetUrl('js/d3-hexbin.min.js','JDC'));
         $view->headScript()->appendFile($view->assetUrl('js/jquery-3.6.0.min.js','JDC'));                
+        $view->headScript()->appendFile($view->assetUrl('js/jquery-ui.js','JDC'));                
         $view->headScript()->appendFile($view->assetUrl('js/jBox.all.min.js','JDC'));
         $view->headScript()->appendFile($view->assetUrl('js/jdc.js','JDC'));
         $view->headScript()->appendFile($view->assetUrl('js/ihm.js','JDC'));    
+        $view->headScript()->appendFile($view->assetUrl('js/textree.js','JDC'));            
         $view->headScript()->appendFile($view->assetUrl('js/mnuContext.js','JDC'));            
-        $view->headScript()->appendFile($view->assetUrl('js/sunburst-chart.js','JDC'));               
-        $view->headLink()->appendStylesheet($view->assetUrl('css/main.css','JDC'));
+        $view->headScript()->appendFile($view->assetUrl('js/sunburst-chart.js','JDC'));  
+        $view->headScript()->appendFile($view->assetUrl('js/d3-sankey.min.js','JDC'));                       
+        $view->headScript()->appendFile($view->assetUrl('js/exploskos.js','JDC'));               
         $view->headLink()->appendStylesheet($view->assetUrl('css/jBox.all.min.css','JDC'));
+        $view->headLink()->appendStylesheet($view->assetUrl('css/jquery-ui.css','JDC'));
+        $view->headLink()->appendStylesheet($view->assetUrl('css/main.css','JDC'));
 
     }
 

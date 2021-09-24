@@ -1,4 +1,5 @@
-let mnuContext, mnuContextCont, mnuContextWidth = 250
+let selectionDetail, mnuContext, mnuContextCont, mnuContextWidth = 250
+, modalCreerDetailtt
 , mnuContextData = {
     'start': {
       name: 'start',
@@ -146,10 +147,10 @@ let mnuContext, mnuContextCont, mnuContextWidth = 250
             fct: mnuContextRemove,
             value: 1,
             children: [{
-              name: 'Créer détail',
+              name: 'Détailler',
               id: 110,
               color: 'yellow',
-              fct: mnuCreateDim,
+              fct: mnuCreateDetail,
               dim: 'Existence',
               value: 1
             }, {
@@ -176,13 +177,13 @@ let mnuContext, mnuContextCont, mnuContextWidth = 250
             name: 'Paramétrer',
             id: 50,
             color: 'green',
-            fct: console.log,
+            fct:'genParam',
             value: 1
             }, {
             name: 'Générer',
             id: 51,
             color:'orange',
-            fct: console.log,
+            fct: generer,
             dim: 'Existence',
             value: 1
           }]
@@ -216,6 +217,10 @@ function mnuContextClick(d){
       case 'showDetail':
         oJDC.showDetail(this.event,d.slt);
         break;    
+      case 'genParam':
+        oJDC.forceActant = d.slt.data ? d.slt.data : d.slt;
+        oJDC.selectRapportDim(false,false);
+        break;    
       default:
         d.fct ? d.fct(d) : console.log(d);
         break;
@@ -223,6 +228,21 @@ function mnuContextClick(d){
 }
 function mnuCreateDim(d){
   createDim(0, d.dim);
+}
+function mnuCreateDetail(d){
+  console.log(d);
+  //mis à jour du modal
+  let b = d3.select('#modalCreerDetailBody');
+  d3.select('#btnSaveDetail').on('click',function(){
+    if(slt){
+      createDim(d.id,d.dim,{
+        'dcterms:title':slt,
+        'dcterms:isPartOf':[{'type':'resource','value':d.id}]          
+      });
+    }
+  })
+  sltData = d.slt.data
+  modalCreerDetail.show();
 }
 function mnuContextRemove(){
   d3.select('.sunburst-viz').remove();
@@ -240,12 +260,21 @@ function mnuContextInit(e,d){
     //ajoute les menus de l'item
     if(dt["jdc:hasMenu"]){
       dt["jdc:hasMenu"].forEach(m=>{
-        mnuData.children[0].children.push(mnuContextData[m["@value"]]);
+        let mnuExist = mnuData.children[0].children.filter(mnu=>mnu.name==m["@value"]);
+        if(mnuExist.length==0)
+          mnuData.children[0].children.push(mnuContextData[m["@value"]]);
       })
     }
-    mnuData.children[0].children.forEach((m,i)=>{
+    //ajoute les données
+    mnuData.children[0].children.forEach(m=>{
       m.dim=dt.dim;
       m.slt = d;
+      if(m.children){
+        m.children.forEach(mc=>{
+          mc.dim=dt.dim;
+          mc.slt = d;  
+        })  
+      }
     });
     mnuContextShow(e.offsetX, e.offsetY, mnuData);
   }

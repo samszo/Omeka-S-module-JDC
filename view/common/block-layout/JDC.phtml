@@ -1,48 +1,26 @@
 <?php
 $id =$this->params()->fromQuery('id', '');
-$item = $this->vars('item');
+$item = $id ? $this->api()->read('items',$id)->getContent() : false;
 $site = $this->vars('site');
-$itemsDims = [];
 
 ?>
 <div class="container" id="jdcMainContainer">
     <div class="row">
-      <?php echo $this->partial('JDC/nav_tools',['item'=>$item,'heading'=>$this->vars('heading')]);?>
+      <?php //echo $this->partial('JDC/nav_tools',['item'=>$item,'heading'=>$this->vars('heading')]);?>
     </div>
     <div class="row">
-      <div id='jdcGraph<?php echo $id;?>' class='jdc' ></div>
+      <div id='jdcGraph' class='jdc' ></div>
     </div>
 </div>
 <?php echo $this->partial('JDC/modal_ajoutRapport');?>
 <?php echo $this->partial('JDC/modal_patienter');?>
+<?php echo $this->partial('JDC/modal_creerDetail');?>
 
 <script>
+  item = <?php echo json_encode($item); ?>;
 
   window.onload = function() {
-    contDim = d3.select('#jdcGraph<?php echo $id;?>').node().getBoundingClientRect();
-    //gestion du menu contextuel
-    mnuContextCont = d3.select('body').append('div')
-      .attr('id','jdcMenuContext<?php echo $id;?>')
-      .style('position','absolute');
-    mnuContextShow(contDim.left-mnuContextWidth/2+contDim.width/2, contDim.top+mnuContextWidth/2, mnuContextData.start);
-
-    //ajouter le JDC 
-    oJDC = new jdc({'idCont':'jdcGraph<?php echo $id;?>','width':contDim.width,'height':600
-      ,'fctCreaDim':createDim,'fctClickDim':mnuContextInit, 'fctUpdateDim':updateDim
-      , 'apiUrl':urlAjax});
-    //gestion des tooltip
-    toolTipAide = new jBox('Tooltip',{
-      target: '#jdcMenuContext<?php echo $id;?>',
-      position: {
-          x: 'center',
-          y: 'top'
-      },
-      content:'Pour commencer créer ou sélectionner une existence'       
-    }).open();        
-    //gestion des modals
-    modalAjoutRapport = new bootstrap.Modal(document.getElementById('modalAjoutRapport'));
-    modalPatienter = new bootstrap.Modal(document.getElementById('modalPatienter'));
-
+    initIhmJdc();
   };
 
 </script>

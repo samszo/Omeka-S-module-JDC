@@ -44,3 +44,20 @@
     dominant-baseline: middle;
     text-anchor: middle;
 }
+.ui-autocomplete { 
+    z-index:2147483647; 
+    height: 300px;
+    overflow: scroll;
+}
+.findTerm {
+        color:red;
+        font-weight: bold;
+}
+.alertRapport {
+    display:none;
+    height:30px;
+    line-height:30px;
+    margin-top:4px;
+    margin-bottom:1px;
+    padding:0px 15px;
+}

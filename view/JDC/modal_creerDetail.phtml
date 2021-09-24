@@ -1,0 +1,130 @@
+<div class="modal fade" id="modalCreerDetail" tabindex="-1" aria-labelledby="modalCreerDetailLabel"
+    aria-hidden="true">
+    <div class="modal-dialog modal-fullscreen" >
+        <div class="modal-content" style='background-color:black;'>
+            <div class="modal-header">
+
+            <nav class="navbar navbar-expand-lg navbar-dark bg-dark" aria-label="Détailler une dimension">
+                <div class="container-xl">
+                <a class="navbar-brand" href="#">Détailler une dimension</a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nbDetailDim" aria-controls="nbDetailDim" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <div class="collapse navbar-collapse" id="nbDetailDim">
+                    <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item">
+                        <a class="nav-link" id='btnAssoTxt' href="#">Associer</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id='btnDissoTxt' href="#">Dissocier</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id='btnCateTxt' href="#">Catégoriser</a>
+                    </li>
+                    </ul>
+                </div>
+                </div>
+            </nav>
+
+            </div>
+            <div class="modal-body" id="modalCreerDetailBody">
+                <div class="container">
+                    <div class="row">
+                        <div id="modalCreerDetailTextTree" class="col">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <?php echo $this->partial('JDC/nav_skos');?>
+                    </div>
+                    <div class="row">
+                        <div id="modalCreerDetailExploskos" class="col">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                <button type="button" id="btnSaveDetail" class="btn btn-primary">Enregistrer</button>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    d3.select('#btnAssoTxt').on('click',function(){
+        let l = d3.select(this);
+        if(l.style('background-color')=='green'){
+            l.style('background-color','');
+            toolTipAide.close();
+            modalCreerDetailtt.currentAsso = [];
+            modalCreerDetailtt.currentFct = console.log;
+        }else{
+            toolTipAide = new jBox('Tooltip',{
+                target: '#txtreeMain',
+                position: {
+                    x: 'center',
+                    y: 'bottom'
+                },
+            content:"<p>Sélectionner les éléments à associer puis"
+                +" <button type='button' onclick='createDimTxtAsso(modalCreerDetailtt)' class='btn btn-primary'>Valider</button>"
+                +" ou <button type='button' onclick='annulerTxtAsso()' class='btn btn-secondary'>Annuler</button>"
+                +"</p>"       
+            }).open();        
+            l.style('background-color','green');
+            modalCreerDetailtt.currentAsso = [];
+            modalCreerDetailtt.currentFct = modalCreerDetailtt.associer;
+        };
+    });
+    d3.select('#btnDissoTxt').on('click',function(){
+
+    });
+    d3.select('#btnCateTxt').on('click',function(){
+        let l = d3.select(this);
+        if(l.style('background-color')=='green'){
+            l.style('background-color','');
+            toolTipAide.close();
+            modalCreerDetailtt.currentAsso = [];
+            modalCreerDetailtt.currentFct = console.log;
+            d3.select('#contCptRapports').style('display','none');
+        }else{
+            toolTipAide = new jBox('Tooltip',{
+                target: '#txtreeMain',
+                position: {
+                    x: 'center',
+                    y: 'bottom'
+                },
+            content:"<p>Sélectionner une association à catégoriser"
+                +"</p>"       
+            }).open();        
+            l.style('background-color','green');
+            modalCreerDetailtt.clickAssoFct = showExploSkos;
+        };
+
+    });
+    function annulerTxtAsso(){
+        d3.select('#btnAssoTxt').style('background-color','');
+        d3.selectAll('.txtreeMot').style('background-color',d=>d.bgcolor);        
+        toolTipAide.close();
+        modalCreerDetailtt.currentAsso = [];
+        modalCreerDetailtt.currentFct = console.log;        
+    }
+    function validerAsso(){
+        console.log('validerAsso');
+    }
+    function showExploSkos(e,d){
+        d3.select('#modalCreerDetailExploskos').style('display','block');
+        d3.select('#contCptRapports').style('display','block');
+        d3.select("#btnValiderAjoutSkos").on("click",()=>saveRapports(d));
+        d3.select("#autocomplete_Physique_btnAjout").on("click",(e)=>ajouteDimForDetail(e,d));
+        d3.select("#autocomplete_Actant_btnAjout").on("click",(e)=>ajouteDimForDetail(e,d));
+        d3.select("#autocomplete_Concept_btnAjout").on("click",(e)=>ajouteDimForDetail(e,d));
+        
+        //supprime les précédends ajouts
+        d3.selectAll('.addCptRapports').remove();
+        cptRapports = [];
+
+        toolTipAide.close();
+        showReseauConcept(d.itemAsso);        
+    }
+
+</script>
