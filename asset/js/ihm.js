@@ -480,7 +480,8 @@ function generer(d){
     let dt = {
         'idExi': oJDC.idExi,
         'action': 'generer',
-        'data': d.slt.data ? d.slt.data : d.slt                     
+        'data': d.slt.data ? d.slt.data : d.slt,
+        'paramsGen':['replaceSamePredicatValue']
     }
     $.ajax({
         type: 'POST',

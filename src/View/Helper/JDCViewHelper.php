@@ -10,8 +10,8 @@ class JDCViewHelper extends AbstractHelper
     protected $settings;
     protected $exiDims;
     protected $rdfDims;
-    protected $props;
     protected $propsRelations;
+    protected $props;
     protected $rcs;
     protected $skosRapports;
     var $doublons;
@@ -25,6 +25,7 @@ class JDCViewHelper extends AbstractHelper
     public function __construct($services)
     {
       $this->api = $services['api'];
+      $this->cnx = $services['cnx'];
       $this->logger = $services['logger'];
       $this->settings = $services['settings']->get('JDCConfigs');
       $this->exiDims = ['Physique','Actant','Concept','Rapport'];
@@ -46,6 +47,7 @@ class JDCViewHelper extends AbstractHelper
      */
     public function __invoke($data)
     {
+      if(!isset($data['params']['action']))return [];
       switch ($data['params']['action']) {
         case 'createDim':
           $rs = $this->createDim($data['params']);
@@ -81,24 +83,23 @@ class JDCViewHelper extends AbstractHelper
 
     function generer($params){
       if (class_exists(\Generateur\Generateur\Moteur::class)) {
+                
         //création du moteur de génération
-        $m = new \Generateur\Generateur\Moteur(true,$this->api);
-        //récupère les données de génération = les rapports de l'existence ayant comme actant le générateur
-        $rc =  $this->getRc('jdc:SemanticPosition');
-        $pIRB =  $this->getProp('dcterms:isReferencedBy');
-        //création ou mise à jour
-        $param = array();
-        $param['property'][0]['property']= $pIRB->id()."";
-        $param['property'][0]['type']='eq';
-        $param['property'][0]['text']=$ref; 
-        $existe = $this->api->search('items',$param)->getContent();
-        $q = 
+        $m = new \Generateur\Generateur\Moteur(true,$this->api,$params['log'],$this->cnx);
+        $gen = $m->genereExiJDC($params);
+        $data = $m->getData(true);
 
-        return $m->getTexte();
+
+        return $this->createGeneration($gen);
       }else{
         throw new \Omeka\Job\Exception\InvalidArgumentException("Le module Générateur n'est pas installé."); // @translate
       }
     }
+
+    function createGeneration($data){
+    
+    }
+
 
     function createSkosRapports($params){
       //récupère le concept

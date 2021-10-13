@@ -13,6 +13,7 @@ class JDCFactory implements FactoryInterface
             'api'=>$services->get('Omeka\ApiManager')
             ,'logger' => $services->get('Omeka\Logger')
             ,'settings' => $services->get('Omeka\Settings')
+            ,'cnx' => $services->get('Omeka\Connection')
         ]; 
         
         return new JDCViewHelper($arrS);
