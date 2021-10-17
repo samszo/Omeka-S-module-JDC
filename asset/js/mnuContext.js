@@ -180,8 +180,14 @@ let selectionDetail, mnuContext, mnuContextCont, mnuContextWidth = 250
             fct:'genParam',
             value: 1
             }, {
+              name: 'Générations',
+              id: 51,
+              color: 'green',
+              fct:'genShow',
+              value: 1
+            }, {
             name: 'Générer',
-            id: 51,
+            id: 52,
             color:'orange',
             fct: generer,
             dim: 'Existence',

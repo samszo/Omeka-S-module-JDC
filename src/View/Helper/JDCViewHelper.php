@@ -85,21 +85,34 @@ class JDCViewHelper extends AbstractHelper
       if (class_exists(\Generateur\Generateur\Moteur::class)) {
                 
         //création du moteur de génération
-        $m = new \Generateur\Generateur\Moteur(true,$this->api,$params['log'],$this->cnx);
+        $m = new \Generateur\Generateur\Moteur(true,$this->api,isset($params['log']) ? $params['log'] : false,$this->cnx);
         $gen = $m->genereExiJDC($params);
-        $data = $m->getData(true);
-
-
-        return $this->createGeneration($gen);
+        return $this->getGeneration($gen);
       }else{
         throw new \Omeka\Job\Exception\InvalidArgumentException("Le module Générateur n'est pas installé."); // @translate
       }
     }
 
-    function createGeneration($data){
-    
+    function getGeneration($gen){
+      //vérifie l'existence d'une génératiuon équivalente
+      $param = array();
+      $param['property'][0]['property']= $this->getProp('bibo:content')->id();
+      $param['property'][0]['type']='eq';
+      $param['property'][0]['text']=$gen['data']['bibo:content'][0]['@value']; 
+      $existe = $this->api->search('generations',$param)->getContent();
+      if(count($existe)){
+        $oGen = $existe[0]; 
+      }else{
+        $valueObject = [];
+        $valueObject['@value'] = "Génération ".uniqid();
+        $valueObject['type'] = 'literal';
+        $valueObject['property_id']=$this->getProp('dcterms:title')->id();
+        $gen['data']['dcterms:title'][] = $valueObject;    
+        $gen['data']['o:resource'] = ['o:id'=>$gen['exi']->id()];      
+        $oGen = $this->api->create('generations', $gen['data']);
+      }
+      return $oGen;
     }
-
 
     function createSkosRapports($params){
       //récupère le concept
