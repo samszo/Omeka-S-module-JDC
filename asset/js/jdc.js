@@ -126,7 +126,8 @@ class jdc {
         let svg, svgBBox, container, dimsBand, physiqueBand, conceptBand
             , toolTipAjoutRapport, dimSelect
             , rdfTriplet = [{'t':'Sujet','dim':'Actant'}, {'t':'Objet','dim':'Physique'}, {'t':'Predicat','dim':'Concept'}]
-            , rapportDims=[], fontSize = 16;            
+            , rapportDims=[], fontSize = 16
+            , colorsPhy=[];            
 
         this.init = function () {
             d3.select('#svg'+me.id).remove();
@@ -149,6 +150,8 @@ class jdc {
                      
         }
         this.setData = function(){
+            //initialise les générations
+            me.data.Generation=[];
             //construction des hiérarchies
             me.hierarchies = {
                 "Physique" : d3.hierarchy(me.data.Physique)
@@ -262,11 +265,10 @@ class jdc {
             let fs = 32;
             let existenceG = container.selectAll('.jdcExitenceG').data(me.data.Existence).enter()
                 .append('g').attr('id',e=>'jdcDim_'+me.id+'_'+e.id).attr('class','jdcExitenceG')
-                .attr("transform", `translate(0,${fs})`)
+                .attr("transform", `translate(${svgBBox.width/2},${svgBBox.height-(fs/3)})`)
                 .on('click',me.fctClickDim);
             let existenceT = existenceG.append('text')
-                .attr("x", 0)
-                .attr("y", 0)                
+                .attr("text-anchor", "middle")
                 .attr("font-size",fs);
             existenceT.append("tspan")
                 .text(e=>e['o:title']);
@@ -496,7 +498,58 @@ class jdc {
 
         }
 
-  
+        this.addGenerations=function(){
+            if(!me.data.Generation.length)return;
+            container.select('#jdcGen_'+me.id).remove();
+            let gen = container.append('g').attr('id','jdcGen_'+me.id);
+            let gens = gen.selectAll('g').data(me.data.Generation).enter().append('g')
+                .attr('id',(d,i)=>{
+                    //récupère les coordonnées de la dimension physique
+                    d.flux = JSON.parse(d["genex:hasFlux"][0]["@value"]);
+                    d.phy = d3.select('#jdcDim_'+me.id+'_'+d["o:resource"]["o:id"]);
+                    d.phyBBox = d.phy.node().getBoundingClientRect();
+                    d.idPhy = parseInt(Object.keys(d.flux)[0]);
+                    d.width = d.phyBBox.width;
+                    d.x = physiqueBand(d.idPhy)+10;                    
+                    return `gen_${me.id}_${d['o:id']}`;
+                });
+                
+            let rect = gens.append("rect")
+                .attr("id", d => d.nodeUid = "genRect_"+me.id+'_'+d['o:id'])
+                .attr("fill", (d,i) => {
+                    d.color = colorsPhy[d.idPhy](i);
+                    return d.color;
+                })
+                .attr("width", d=>d.width)
+                .attr("height", d=>d.height);
+                            
+            gens.append("clipPath")
+                .attr("id", d => d.clipUid = "genClip_"+me.id+'_'+d['o:id'])
+                .append("use")
+                .attr("xlink:href", d => "#"+d.nodeUid);
+
+            let txt = gens.append("text")
+                .attr("clip-path", d => d.clipUid)
+                .selectAll("tspan")
+                .data((d,i) => {
+                    d.wl = wrapLabel(d["bibo:content"][0]["@value"], d.width)
+                    //mise à jour de la hauteur des éléments
+                    d.height = fontSize*d.wl.length*2;
+                    d.y = dimsBand('Physique')-d.height-(i*20)-20;                                        
+                    return d.wl;
+                })
+                .join("tspan")
+                .text(d => d);
+            
+            //modifient les éléments suite au wrap            
+            gens.attr('transform',d=>`translate(${d.x},${d.y})`);
+            rect.attr("height", d=>d.height);
+            gens.selectAll("tspan")
+                .attr("x", 3)
+                .attr("y", (d, i, nodes) => `${(i === nodes.length - 1) * 0.3 + 1.1 + i * 0.9}em`);
+
+        }
+
         function addPhysiques(){
             if(!me.data.Physique.children.length)return;
             let PhysiqueKey = me.data.Physique.children.map(d=>d.id);
@@ -509,11 +562,11 @@ class jdc {
             let format = d3.format(",d")
             , PhysiqueColor = d3.scaleOrdinal(PhysiqueKey, d3.schemeTableau10)
             , treemap           
-            , PhysiqueG=[], colors=[];
+            , PhysiqueG=[];
             me.data.Physique.children.forEach(p=>{
                 PhysiqueG[p.id]=container.append('g').attr('id','jdcDim_'+me.id+'_'+p.id).attr('class','jdcPhysiqueG');
                 const hsl = d3.hsl(PhysiqueColor([p.id]));
-                colors[p.id] = d3.scaleLinear()
+                colorsPhy[p.id] = d3.scaleLinear()
                     .domain([0, 6])//TODO:calculer la profondeur maximale
                     .range(["hsl("+hsl.h+",80%,80%)", "hsl("+hsl.h+",30%,40%)"])
                     .interpolate(d3.interpolateHcl)                
@@ -548,7 +601,7 @@ class jdc {
                 node.append("rect")
                     .attr("id", d => d.nodeUid = "physiqueRect_"+me.id+'_'+d.data.id)
                     .attr("fill", d => {
-                        d.color = colors[d.ancestors()[d.depth].data.id](d.depth);
+                        d.color = colorsPhy[d.ancestors()[d.depth].data.id](d.depth);
                         return d.color;
                     })
                     .attr("width", d => d.x1 - d.x0)
@@ -580,8 +633,8 @@ class jdc {
                     .attr("y", (d, i, nodes) => `${(i === nodes.length - 1) * 0.3 + 1.1 + i * 0.9}em`);
                 */
                 node.selectAll("tspan")
-                .attr("x", 3)
-                .attr("y", (d, i, nodes) => `${(i === nodes.length - 1) * 0.3 + 1.1 + i * 0.9}em`);
+                    .attr("x", 3)
+                    .attr("y", (d, i, nodes) => `${(i === nodes.length - 1) * 0.3 + 1.1 + i * 0.9}em`);
 
 
               })    

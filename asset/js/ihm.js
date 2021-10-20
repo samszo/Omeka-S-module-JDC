@@ -490,6 +490,8 @@ function generer(d){
         data: dt
     })
     .done(function(rs) {
+        oJDC.data.Generation.push(rs);
+        oJDC.addGenerations();
         console.log(rs);
     })
     .fail(function(e) {
