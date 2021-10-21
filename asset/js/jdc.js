@@ -506,11 +506,11 @@ class jdc {
                 .attr('id',(d,i)=>{
                     //récupère les coordonnées de la dimension physique
                     d.flux = JSON.parse(d["genex:hasFlux"][0]["@value"]);
-                    d.phy = d3.select('#jdcDim_'+me.id+'_'+d["o:resource"]["o:id"]);
-                    d.phyBBox = d.phy.node().getBoundingClientRect();
                     d.idPhy = parseInt(Object.keys(d.flux)[0]);
+                    d.phy = d3.select('#jdcDim_'+me.id+'_'+d.idPhy);
+                    d.phyBBox = d.phy.node().getBoundingClientRect();
                     d.width = d.phyBBox.width;
-                    d.x = physiqueBand(d.idPhy)+10;                    
+                    d.x = physiqueBand(d.idPhy);                    
                     return `gen_${me.id}_${d['o:id']}`;
                 });
                 
@@ -535,7 +535,7 @@ class jdc {
                     d.wl = wrapLabel(d["bibo:content"][0]["@value"], d.width)
                     //mise à jour de la hauteur des éléments
                     d.height = fontSize*d.wl.length*2;
-                    d.y = dimsBand('Physique')-d.height-(i*20)-20;                                        
+                    d.y = dimsBand('Physique')-(d.height*i)-(d.height)-20;                                        
                     return d.wl;
                 })
                 .join("tspan")

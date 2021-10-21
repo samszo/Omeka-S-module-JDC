@@ -318,7 +318,7 @@ class JDCViewHelper extends AbstractHelper
         $first = true;
         foreach ($this->propsRelations as $r) {
           if($r['dir']){
-            $prop = ['property'=>$r['id'],'type'=>'res','text'=>$item->id(),'joiner'=> $first ? "and" : "or"];
+            $prop = ['property'=>$r['id']."",'type'=>'res','text'=>$item->id(),'joiner'=> $first ? "and" : "or"];
             $this->querySemanticPositionTarget['property'][]=$prop;
             $this->skosRapports[]=$r;
             $first=false;
@@ -459,8 +459,14 @@ class JDCViewHelper extends AbstractHelper
                   $arrN = false;
                   switch ($cpt->type()) {
                       case "resource":
-                          //récupère l'item
-                          $oN = $this->api->read('items', $cpt->valueResource()->id())->getContent();
+                          if($target){
+                            //récupère le top concept dans le cas d'une target
+                            $topCpt = $item->value('skos:hasTopConcept');
+                            $oN = $this->api->read('items', $topCpt->valueResource()->id())->getContent();
+                          }else{
+                            //récupère l'item
+                            $oN = $this->api->read('items', $cpt->valueResource()->id())->getContent();
+                          }
                           $arrN = array("name"=>$oN->displayTitle(),"item"=>$this->setPropForIHM($oN)
                             ,"type"=>$oN->resourceClass()->label(),"liens"=>[]);                            
                           //ajoute le noeud

@@ -21,13 +21,8 @@ function initIhmJdc(){
     modalCreerDetailNode = document.getElementById('modalCreerDetail')
     modalCreerDetail = new bootstrap.Modal(modalCreerDetailNode);
     modalCreerDetailNode.addEventListener('shown.bs.modal', function (event) {
-      //construction des objets quand la modal est chargée 
-      modalCreerDetailtt = new textree({'data':sltData,'idCont':'modalCreerDetailTextTree'});
-      setAutoComplete('Physique');
-      setAutoComplete('Actant');
-      setAutoComplete('Concept');
-  
-    })    
+      initModalCreerDetail();
+    }) 
     //gestion des tooltip
     if(!item){
         mnuContextShow(contDim.left-mnuContextWidth/2+contDim.width/2, contDim.top+mnuContextWidth/2, mnuContextData.start);

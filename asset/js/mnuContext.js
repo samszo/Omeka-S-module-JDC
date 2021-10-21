@@ -198,7 +198,7 @@ let selectionDetail, mnuContext, mnuContextCont, mnuContextWidth = 250
     
 function mnuContextShow(x, y, data){
   mnuContextRemove();
-  mnuContextCont.style('left',x+'px').style('top',y+'px');
+  mnuContextCont.style('left',(x-mnuContextWidth/2)+'px').style('top',(y-mnuContextWidth/2)+'px');
   let mnuContext = Sunburst()
       .data(data)
       //.color(d => color(d.name))
@@ -238,7 +238,7 @@ function mnuCreateDim(d){
 function mnuCreateDetail(d){
   console.log(d);
   //mis à jour du modal
-  let b = d3.select('#modalCreerDetailBody');
+  //let b = d3.select('#modalCreerDetailBody');
   d3.select('#btnSaveDetail').on('click',function(){
     if(slt){
       createDim(d.id,d.dim,{
@@ -258,7 +258,7 @@ function mnuContextInit(e,d){
   if(dt.dim=='Existence'){
     mnuContextData.existence.children[0].name=dt['o:title'];
     mnuContextData.existence.children[0].children[0].slt = d;
-    mnuContextShow(e.offsetX, e.offsetY, mnuContextData.existence);
+    mnuContextShow(e.clientX, e.clientY, mnuContextData.existence);
   }else{
     let mnuData = mnuContextData.dim;
     mnuData.children[0].name=dt['o:title'];
@@ -282,7 +282,7 @@ function mnuContextInit(e,d){
         })  
       }
     });
-    mnuContextShow(e.offsetX, e.offsetY, mnuData);
+    mnuContextShow(e.clientX, e.clientY, mnuData);
   }
 }
 

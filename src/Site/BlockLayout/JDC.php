@@ -93,6 +93,7 @@ class JDC extends AbstractBlockLayout
         $view->headScript()->appendFile($view->assetUrl('js/sunburst-chart.js','JDC'));  
         $view->headScript()->appendFile($view->assetUrl('js/d3-sankey.min.js','JDC'));                       
         $view->headScript()->appendFile($view->assetUrl('js/exploskos.js','JDC'));               
+        $view->headScript()->appendFile($view->assetUrl('js/modalCreerDetail.js','JDC'));               
         $view->headLink()->appendStylesheet($view->assetUrl('css/jBox.all.min.css','JDC'));
         $view->headLink()->appendStylesheet($view->assetUrl('css/jquery-ui.css','JDC'));
         $view->headLink()->appendStylesheet($view->assetUrl('css/main.css','JDC'));
