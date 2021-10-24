@@ -180,6 +180,11 @@
                 .attr("fill", d => d.type=='deb' || d.type=='fin' ? color(d.x0) : colorSkos(d.type))
                 .attr("height", d => d.y1 - d.y0)
                 .attr("width", d => d.x1 - d.x0)
+                .style("cursor",d => d.type=='deb' || d.type=='fin' ? "none" : "zoom-in")
+                .on('click',(e,d) => {
+                  d.type=='deb' || d.type=='fin' ?
+                    console.log(d) : showExploSkos(e,{'itemAsso':d.item.id})
+                })
               .append("title")
                 .text(d => {
                   let n = d.type=='deb' || d.type=='fin' ? d.name : "";
@@ -200,7 +205,7 @@
                 .attr("text-anchor", d => d.x0 < me.width / 2 ? "start" : "end")
                 .attr("font-size", d => d.type == "concept" ? me.fontSize*2 : me.fontSize)
                 .style("fill", d => d.type == "concept" ? "white" : "white")
-                .style("cursor",d => d.type=='deb' || d.type=='fin' ? "none" : "zoom-in")
+                .style("cursor",d => d.type=='deb' || d.type=='fin' ? "none" : "help")
                 .text(d => d.name)
                 .on('click',(e,d) => {
                   d.type=='deb' || d.type=='fin' ?

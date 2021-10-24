@@ -337,12 +337,6 @@ function drawRapport(item) {
     let colName = r.append('div').attr('class', 'col-5');
     colName.append('span')
         .text(d => d.value)
-    let colButton = r.append('div').attr('class', 'col-1');
-    colButton.append('span')
-        .style("cursor", "pointer")
-        .on('click',delRapport)
-        .append('i')
-        .attr('class', 'far fa-trash-alt');
     let colChoix = r.append('div').attr('class', 'col-6');
     colChoix.append('select')
         .attr('id', d => 'sltCptRapports' + d.id)
@@ -350,7 +344,13 @@ function drawRapport(item) {
         .on('change', choixRapport)
         .selectAll('option').data(rapports).enter()
         .append('option').attr('value', o => o.id).text(o => o.term);
-
+    let colButton = r.append('div').attr('class', 'col-1');
+    colButton.append('span')
+            .style("cursor", "pointer")
+            .on('click',delRapport)
+            .append('i')
+            .attr('class', 'far fa-trash-alt');
+    
     let rAlert = colGen.append('div')
         .attr('id', d => 'rChoixRapportA' + d.id)
         .attr('class', 'row');

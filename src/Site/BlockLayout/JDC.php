@@ -84,7 +84,10 @@ class JDC extends AbstractBlockLayout
         $view->headScript()->appendFile($view->assetUrl('js/d3.min.js','JDC'));
         $view->headScript()->appendFile($view->assetUrl('js/d3-hexbin.min.js','JDC'));
         $view->headScript()->appendFile($view->assetUrl('js/jquery-3.6.0.min.js','JDC'));                
-        $view->headScript()->appendFile($view->assetUrl('js/jquery-ui.js','JDC'));                
+        $view->headScript()->appendFile($view->assetUrl('js/bootstrap.bundle.min.js','JDC'));
+        $view->headScript()->appendFile($view->assetUrl('js/jquery-ui.js','JDC'));    
+        $view->headScript()->appendFile($view->assetUrl('js/all.min.js','JDC'));//fontawesome
+            
         $view->headScript()->appendFile($view->assetUrl('js/jBox.all.min.js','JDC'));
         $view->headScript()->appendFile($view->assetUrl('js/jdc.js','JDC'));
         $view->headScript()->appendFile($view->assetUrl('js/ihm.js','JDC'));    
@@ -94,6 +97,7 @@ class JDC extends AbstractBlockLayout
         $view->headScript()->appendFile($view->assetUrl('js/d3-sankey.min.js','JDC'));                       
         $view->headScript()->appendFile($view->assetUrl('js/exploskos.js','JDC'));               
         $view->headScript()->appendFile($view->assetUrl('js/modalCreerDetail.js','JDC'));               
+        $view->headLink()->prependStylesheet($view->assetUrl('css/bootstrap.min.css','JDC'));
         $view->headLink()->appendStylesheet($view->assetUrl('css/jBox.all.min.css','JDC'));
         $view->headLink()->appendStylesheet($view->assetUrl('css/jquery-ui.css','JDC'));
         $view->headLink()->appendStylesheet($view->assetUrl('css/main.css','JDC'));

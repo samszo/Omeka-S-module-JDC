@@ -96,3 +96,54 @@ function showExploSkos(e,d){
     if(toolTipAide)toolTipAide.close();
     showReseauConcept(d.itemAsso);        
 }
+
+function ajoutRowRapport(){
+    let r = d3.select('#tableAjoutRapport').append('tr');
+    r.append('th').attr('scope',"row").html('<i class="far fa-trash-alt" onclick="delRapport()"></i>');
+    r.append('td').html(createDropDownForRapport('choisissez un sujet','AjoutSujet1'));
+    r.append('td').append('div').append('select')
+        .attr('id', d => 'sltCptRapports')
+        .attr('class', 'form-control')
+        .on('change', choixRapport)
+        .selectAll('option').data(rapports).enter()
+        .append('option').attr('value', o => o.id).text(o => o.term);
+    r.append('td').html(createDropDownForRapport('choisissez un objet','AjoutObjet1'));
+    setAutoComplete('PhysiqueajoutObjet1');
+
+}
+function createDropDownForRapport(titre, id){
+
+
+    html = '<div class="dropdown">';
+    html += '<button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton1" data-bs-toggle="dropdown" aria-expanded="false">'+titre+'</button>';
+    html += '<div class="dropdown-menu">';
+    html += '<form class="px-4 py-3">';
+    html += '<button type="submit" class="btn btn-primary">'+sltData['o:title']+'</button>';
+    html += '<div class="dropdown-divider"></div>';
+    html += '<div class="mb-3">';
+    html += createAutoCompleteForDim('Physique', id);
+    html += '</div>';
+    html += '<div class="mb-3">';
+    html += createAutoCompleteForDim('Actant', id);
+    html += '</div>';
+    html += '<div class="mb-3">';
+    html += createAutoCompleteForDim('Concept', id);
+    html += '</div>';
+    html += '</form>';
+    html += '</div>';
+
+    html += '</div>';
+
+    return html;
+}
+function createAutoCompleteForDim(dim, id){
+    let html = '<div class="ui-widget">';
+    html += '<label style="color:white;" for="autocomplete__'+dim+id+'">Sélectionner / Ajouterun '+dim+' :</label>';
+    html += '<div id="spin-autocomplete_'+dim+id+' style="display:none;color:white" class="spinner-border spinner-border-sm" role="status">';
+    html += '<span class="sr-only">Chargement...</span>';
+    html += '</div>';
+    html += '<input class="form-control" id="autocomplete_'+dim+id+'" size="64">';
+    html += '<button id="autocomplete_'+dim+id+'_btnAjout" class="btn btn-primary" type="button">Ajouter</button>';
+    html += '</div>';
+    return html;
+}

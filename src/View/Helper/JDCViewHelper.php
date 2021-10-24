@@ -169,8 +169,15 @@ class JDCViewHelper extends AbstractHelper
               $oItem[$oP->term()][] = $valueObject; 
               break;            
             case 'dcterms:title':
+              $titre = "Position sémantique ".$data['rt']
+                ." « ".$concept->displayTitle()." » ";
+              foreach ($data['rapports'] as $r) {
+                $oP =  $this->getProp($r['rapport']['term']);
+                $titre .= " avec '".$oP->label()."' = '".$r['label']."'";
+              }                
+              $titre .= " » par ".$actant->displayTitle();
               $valueObject = [];
-              $valueObject['@value'] = "Position sémantique ".$data['rt']." de « ".$concept->displayTitle()." » par ".$actant->displayTitle();
+              $valueObject['@value'] = $titre;
               $valueObject['type'] = 'literal';
               $valueObject['property_id']=$oP->id();
               $oItem[$oP->term()][] = $valueObject;    
@@ -198,7 +205,6 @@ class JDCViewHelper extends AbstractHelper
       //ajoute ou modifie les rapports au propriété
       foreach ($data['rapports'] as $r) {
         $oItem = [];
-        //$oP =  $this->api->search('properties', ['term' => $r['rapport']['term']])->getContent()[0];
         $oP =  $this->getProp($r['rapport']['term']);
         $valueObject = [];
         $valueObject['value_resource_id']=$r['id'];        
