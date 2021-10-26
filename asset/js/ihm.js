@@ -16,7 +16,7 @@ function initIhmJdc(){
       , 'apiUrl':urlAjax});
     //gestion des modals
     modalAjoutRapport = new bootstrap.Modal(document.getElementById('modalAjoutRapport'));
-    modalPatienter = new bootstrap.Modal(document.getElementById('modalPatienter'));
+    modalPatienter = new modalPatienter();
     //pour gérer les événements d'ouverture
     modalCreerDetailNode = document.getElementById('modalCreerDetail')
     modalCreerDetail = new bootstrap.Modal(modalCreerDetailNode);
@@ -83,7 +83,7 @@ function dimSaveChange(dt){
         d3.select('#dimItemSpin'+dt.idDim).style('display','none');
     })
     .always(function() {
-        modalPatienter.hide();
+        modalPatienter.close();
     });
 }
 
@@ -144,7 +144,7 @@ function createDim(id, dim, data){
         console.log("error = "+JSON.stringify(e));
     })
     .always(function() {
-        modalPatienter.hide();
+        modalPatienter.close();
     });
 
 }
@@ -173,7 +173,7 @@ function updateDim(dt){
         console.log("error = "+JSON.stringify(e));
     })
     .always(function() {
-        modalPatienter.hide();
+        modalPatienter.close();
     });
 
 }
@@ -204,14 +204,15 @@ function createDimTxtAsso(tt){
         toolTipAide.content.append('<div class="alert alert-danger" role="alert">ERREUR:'+e.status+'<p>'+e.responseText+'</p></div>');
     })
     .always(function() {
-        modalPatienter.hide();
+        modalPatienter.close();
         annulerTxtAsso();
     });
 
 }
 
-function setAutoComplete(id){
+function setAutoComplete(id, idUrl=false){
 
+    if(!idUrl)idUrl=id;
     $("#autocomplete_"+id)
             // don't navigate away from the field on tab when selecting an item
             .on("keydown", function (event) {
@@ -227,7 +228,7 @@ function setAutoComplete(id){
                             d3.select('#spin-'+id).style('display', 'inline-block');
                             d3.select('#icon-'+id).style('display', 'none');
                             $.ajax({
-                                    url: urlsAutoComplete[id] + searchTerm,
+                                    url: urlsAutoComplete[idUrl] + searchTerm,
                                     dataType: "json",
                                     success: function (data) {
                                             d3.select('#spin-'+id).style('display', 'none');
@@ -284,12 +285,14 @@ function showReseauConcept(id){
         rapports=rs.cptRapports;            
         //met à jour le type de rapports
         d3.select('#ajoutConceptLabel').text("Relier « "+rs.item['o:title']+" » à d'autres dimensions");
-        modalPatienter.hide();
+        //affiche le bouton d'ajout de ligne
+        d3.select('#btnAjoutRowRapport').style('display','block');
+        modalPatienter.close();
     })
     .fail(function(e) {
         console.log("error = "+JSON.stringify(e));
         toolTipAide.content.append('<div class="alert alert-danger" role="alert">ERREUR:'+e.status+'<p>'+e.responseText+'</p></div>');
-        modalPatienter.hide();
+        modalPatienter.close();
     });
 }
 function saveRapports(asso) {
@@ -321,7 +324,7 @@ function saveRapports(asso) {
             throw new Error("Sauvegarde imposible : " + e);
     })
     .always(function() {
-        modalPatienter.hide();
+        modalPatienter.close();
     });
 }
 
@@ -467,7 +470,7 @@ function ajouteDimForDetail(e, d){
         console.log("error = "+JSON.stringify(e));
     })
     .always(function() {
-        modalPatienter.hide();
+        modalPatienter.close();
     });
 }
 function generer(d){
@@ -493,7 +496,7 @@ function generer(d){
         console.log("error = "+JSON.stringify(e));
     })
     .always(function() {
-        modalPatienter.hide();
+        modalPatienter.close();
     });
 
 }

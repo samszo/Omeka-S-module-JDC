@@ -99,23 +99,33 @@ function showExploSkos(e,d){
 
 function ajoutRowRapport(){
     let r = d3.select('#tableAjoutRapport').append('tr');
+    let id = d3.select('#tableAjoutRapport').selectAll('tr').size();
+    //ajouter les boutons d'action
     r.append('th').attr('scope',"row").html('<i class="far fa-trash-alt" onclick="delRapport()"></i>');
-    r.append('td').html(createDropDownForRapport('choisissez un sujet','AjoutSujet1'));
+    //ajoute le menu pour le sujet
+    r.append('td').html(createDropDownForRapport('choisissez un sujet','AjoutSujet'+id));
+    //ajoute le menu pour les relations
     r.append('td').append('div').append('select')
-        .attr('id', d => 'sltCptRapports')
+        .attr('id', 'sltCptRapports'+id)
         .attr('class', 'form-control')
         .on('change', choixRapport)
         .selectAll('option').data(rapports).enter()
         .append('option').attr('value', o => o.id).text(o => o.term);
-    r.append('td').html(createDropDownForRapport('choisissez un objet','AjoutObjet1'));
-    setAutoComplete('PhysiqueajoutObjet1');
+    //ajoute le menu pôur l'objet
+    r.append('td').html(createDropDownForRapport('choisissez un objet','AjoutObjet'+id));
+    //initialisation des autocomplete
+    ['AjoutSujet','AjoutObjet'].forEach(a=>{
+        ['Physique','Actant','Concept'].forEach(d=>{
+            setAutoComplete(d+a+id,d);
+        })
+    })
 
 }
 function createDropDownForRapport(titre, id){
 
 
     html = '<div class="dropdown">';
-    html += '<button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton1" data-bs-toggle="dropdown" aria-expanded="false">'+titre+'</button>';
+    html += '<button class="btn btn-secondary dropdown-toggle" type="button" id="ddMB'+id+'" data-bs-toggle="dropdown" aria-expanded="false">'+titre+'</button>';
     html += '<div class="dropdown-menu">';
     html += '<form class="px-4 py-3">';
     html += '<button type="submit" class="btn btn-primary">'+sltData['o:title']+'</button>';
@@ -138,7 +148,7 @@ function createDropDownForRapport(titre, id){
 }
 function createAutoCompleteForDim(dim, id){
     let html = '<div class="ui-widget">';
-    html += '<label style="color:white;" for="autocomplete__'+dim+id+'">Sélectionner / Ajouterun '+dim+' :</label>';
+    html += '<label style="color:white;" for="autocomplete_'+dim+id+'">Sélectionner / Ajouter un '+dim+' :</label>';
     html += '<div id="spin-autocomplete_'+dim+id+' style="display:none;color:white" class="spinner-border spinner-border-sm" role="status">';
     html += '<span class="sr-only">Chargement...</span>';
     html += '</div>';
