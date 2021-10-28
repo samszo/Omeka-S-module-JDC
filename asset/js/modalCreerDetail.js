@@ -98,62 +98,108 @@ function showExploSkos(e,d){
 }
 
 function ajoutRowRapport(){
-    let r = d3.select('#tableAjoutRapport').append('tr');
     let id = d3.select('#tableAjoutRapport').selectAll('tr').size();
-    //ajouter les boutons d'action
-    r.append('th').attr('scope',"row").html('<i class="far fa-trash-alt" onclick="delRapport()"></i>');
-    //ajoute le menu pour le sujet
-    r.append('td').html(createDropDownForRapport('choisissez un sujet','AjoutSujet'+id));
-    //ajoute le menu pour les relations
-    r.append('td').append('div').append('select')
-        .attr('id', 'sltCptRapports'+id)
-        .attr('class', 'form-control')
-        .on('change', choixRapport)
-        .selectAll('option').data(rapports).enter()
-        .append('option').attr('value', o => o.id).text(o => o.term);
-    //ajoute le menu pôur l'objet
-    r.append('td').html(createDropDownForRapport('choisissez un objet','AjoutObjet'+id));
+    let r = d3.select('#tableAjoutRapport').append('tr').attr('id','rowAjoutRapport'+id);
+    let dataCol = [
+        {'type':'btnAction','id':id}
+        ,{'type':'rdf','rdf':'sujet','id':id,'data':sltData}
+        ,{'type':'rapports','id':id,'data':rapports}
+        ,{'type':'rdf','rdf':'objet','id':id,'data':sltData}
+    ];
+    r.selectAll("td")
+    .data(dataCol)
+    .join("td").attr('id',(d,i)=>'colAjoutRapport'+id+i)
+    .each((d,i) => {
+        let s = d3.select('#colAjoutRapport'+id+i);
+        switch (d.type) {
+            case 'btnAction':
+                //ajouter les boutons d'action
+                s.attr('scope',"row").html('<i class="far fa-trash-alt" onclick="delRapport()"></i>');
+                break;
+            case 'rdf':
+                //ajoute le menu
+                createDropDownForRapport(s,d);
+                break;
+            case 'rapports':
+                //ajoute le menu pour les rapports
+                s.append('div').append('select')
+                    .attr('id', 'sltCptRapports'+id)
+                    .attr('class', 'form-control')
+                    .on('change', e=>choixSPO(null,null,id))
+                    .selectAll('option').data(rapports).enter()
+                    .append('option').attr('value', o => o.id).text(o => o.term);
+                break;
+            default:
+                break;
+        }
+    });
+
     //initialisation des autocomplete
-    ['AjoutSujet','AjoutObjet'].forEach(a=>{
-        ['Physique','Actant','Concept'].forEach(d=>{
-            setAutoComplete(d+a+id,d);
-        })
+    dataCol.forEach(d=>{
+        if(d.AC){
+            d.AC.forEach(ac=>setAutoComplete(ac.id,ac,choixSPO));
+        }
     })
 
 }
-function createDropDownForRapport(titre, id){
-
-
+function createDropDownForRapport(t,d){
+    d.ddId = 'MB_'+d.rdf+'_'+d.id;
     html = '<div class="dropdown">';
-    html += '<button class="btn btn-secondary dropdown-toggle" type="button" id="ddMB'+id+'" data-bs-toggle="dropdown" aria-expanded="false">'+titre+'</button>';
+    html += '<button class="btn btn-secondary dropdown-toggle" type="button" id="dd'+d.ddId
+        +'" data-bs-toggle="dropdown" aria-expanded="false">choisissez un '+d.rdf+'</button>';
     html += '<div class="dropdown-menu">';
     html += '<form class="px-4 py-3">';
-    html += '<button type="submit" class="btn btn-primary">'+sltData['o:title']+'</button>';
+    html += '<button type="button" class="btn btn-primary" id="btn'+d.ddId+'">'+d.data['o:title']+'</button>';
     html += '<div class="dropdown-divider"></div>';
     html += '<div class="mb-3">';
-    html += createAutoCompleteForDim('Physique', id);
+    html += createAutoCompleteForDim('Physique', d);
     html += '</div>';
     html += '<div class="mb-3">';
-    html += createAutoCompleteForDim('Actant', id);
+    html += createAutoCompleteForDim('Actant', d);
     html += '</div>';
     html += '<div class="mb-3">';
-    html += createAutoCompleteForDim('Concept', id);
+    html += createAutoCompleteForDim('Concept', d);
     html += '</div>';
     html += '</form>';
     html += '</div>';
-
     html += '</div>';
+    html += '<div id="result'+d.rdf+'_'+d.id+'">';
+    html += '</div>';
+    t.html(html);
+    //ajoute les événements
+    d3.select('#btn'+d.ddId).on('click',e=>choixSPO(d,null));
 
-    return html;
 }
-function createAutoCompleteForDim(dim, id){
+function createAutoCompleteForDim(dim,d){
+    let id = 'createRapport'+dim+d.rdf+d.id;
+    let idUrl = dim;
     let html = '<div class="ui-widget">';
-    html += '<label style="color:white;" for="autocomplete_'+dim+id+'">Sélectionner / Ajouter un '+dim+' :</label>';
-    html += '<div id="spin-autocomplete_'+dim+id+' style="display:none;color:white" class="spinner-border spinner-border-sm" role="status">';
+    html += '<label for="autocomplete_'+id+'">Sélectionner / Ajouter un '+dim+' :</label>';
+    html += '<div id="spin-'+id+'" style="display:none;" class="spinner-border spinner-border-sm" role="status">';
     html += '<span class="sr-only">Chargement...</span>';
     html += '</div>';
-    html += '<input class="form-control" id="autocomplete_'+dim+id+'" size="64">';
-    html += '<button id="autocomplete_'+dim+id+'_btnAjout" class="btn btn-primary" type="button">Ajouter</button>';
+    html += '<input class="form-control" id="autocomplete_'+id+'" size="64">';
+    //html += '<button id="autocomplete_'+id+'_btnAjout" class="btn btn-primary" type="button">Ajouter</button>';
     html += '</div>';
+    if(!d.AC)d.AC=[];
+    d.AC.push({'id':id,'idUrl':idUrl,'d':d});
     return html;
+    
+}
+
+function choixSPO(d,val=null,sltCptId=null){
+    if(sltCptId === null){
+        let v = val ? val.label : d.data['o:title'];
+        let id = val ? d.d.id : d.id;
+        let rdf = val ? d.d.rdf : d.rdf;
+        let idR = rdf+'_'+id;
+        d3.select("#result"+idR).html(v);    
+        if(!cptRapports[id])cptRapports[id]={'sujet':'','predicat':'','objet':''}
+        cptRapports[id][rdf]=val ? val.id : d.data.id;
+    }else{
+        if(!cptRapports[sltCptId])cptRapports[sltCptId]={'sujet':'','predicat':'','objet':''}
+        let idTerm = d3.select('#sltCptRapports' + sltCptId).property('value');
+        let term = rapports.filter(r=>r.id==idTerm)[0];
+        cptRapports[sltCptId]['predicat']=term;
+    }
 }

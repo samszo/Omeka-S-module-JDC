@@ -210,9 +210,8 @@ function createDimTxtAsso(tt){
 
 }
 
-function setAutoComplete(id, idUrl=false){
+function setAutoComplete(id, data=null, callback=null){
 
-    if(!idUrl)idUrl=id;
     $("#autocomplete_"+id)
             // don't navigate away from the field on tab when selecting an item
             .on("keydown", function (event) {
@@ -227,6 +226,7 @@ function setAutoComplete(id, idUrl=false){
                             searchTerm = request.term;
                             d3.select('#spin-'+id).style('display', 'inline-block');
                             d3.select('#icon-'+id).style('display', 'none');
+                            let idUrl = !data ? id : data.idUrl;
                             $.ajax({
                                     url: urlsAutoComplete[idUrl] + searchTerm,
                                     dataType: "json",
@@ -248,10 +248,13 @@ function setAutoComplete(id, idUrl=false){
                             return false;
                     },
                     select: function (event, ui) {
+                        if(callback)
+                            callback(data, ui.item);
+                        else
                             drawRapport(ui.item);
-                            this.value = "";
-                            return false;
-                    },
+                        this.value = "";
+                        return false;
+                },
             }).data("ui-autocomplete")._renderItem = function (ul, item) {
                     const regex = new RegExp(searchTerm, "gi");
                     let html = '<a>' + item.label.replace(regex, '<span class="findTerm">' + searchTerm + '</span>') + '</a>';
