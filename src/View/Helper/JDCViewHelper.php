@@ -64,6 +64,9 @@ class JDCViewHelper extends AbstractHelper
         case 'createDimTxtAsso':
           $rs = $this->createDimTxtAsso($data['params']);
           break;   
+        case 'getReseauConceptAll':
+          $rs = $this->getReseauConceptAll();//très très gourmand, utiliser : CartoAffect\View\Helper\QuerySqlViewHelper::statValueResourceClass
+          break;                  
         case 'getReseauConcept':
           $rs = $this->getReseauConcept($data['params']);
           break;                  
@@ -282,6 +285,19 @@ class JDCViewHelper extends AbstractHelper
         }              
         return $result;
 
+    }
+
+    function getReseauConceptAll(){
+      //récupère les concepts et leurs propriétés
+      set_time_limit(200);
+      $class = $this->getRc('skos:Concept');
+      $items = $this->api->search('items', ['resource_class_id'=>$class->id()])->getContent();
+      $rs = [];
+      foreach ($items as $i) {
+        $rs[]=$this->getReseauConcept(['id'=>$i->id()]);
+        $this->logger->info("getReseauConceptAll = ".$i->id());
+      }
+      return $rs;
     }
 
     function getReseauConcept($params){
