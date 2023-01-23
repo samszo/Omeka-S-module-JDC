@@ -1,8 +1,8 @@
 <?php declare(strict_types=1);
 namespace JDC\Service\Form;
 
-use JDC\Form\ConfigForm;
 use Interop\Container\ContainerInterface;
+use JDC\Form\ConfigForm;
 use Laminas\ServiceManager\Factory\FactoryInterface;
 
 class ConfigFormFactory implements FactoryInterface

@@ -2,11 +2,9 @@
 namespace JDC\Form;
 
 use Laminas\Form\Element;
-use Laminas\Form\Element\Text;
 use Laminas\Form\Form;
 use Laminas\I18n\Translator\TranslatorAwareInterface;
 use Laminas\I18n\Translator\TranslatorAwareTrait;
-use Omeka\Form\Element\PropertySelect;
 
 class ConfigForm extends Form implements TranslatorAwareInterface
 {
@@ -34,7 +32,6 @@ class ConfigForm extends Form implements TranslatorAwareInterface
                 'info' => 'Heading for the block, if any.', // @translate
             ],
         ]);
-
     }
 
     protected function getSetting($name)
@@ -47,5 +44,4 @@ class ConfigForm extends Form implements TranslatorAwareInterface
         $translator = $this->getTranslator();
         return $translator->translate($args);
     }
-
 }

@@ -1,14 +1,14 @@
-<?php
+<?php declare(strict_types=1);
 namespace JDC;
 
 return [
 
     'view_helpers' => [
-        
+
         'invokables' => [
             'JDCViewHelper' => View\Helper\JDCViewHelper::class,
-        ],                
-        'factories'  => [
+        ],
+        'factories' => [
             'JDCFactory' => Service\ViewHelper\JDCFactory::class,
         ],
 
@@ -17,7 +17,7 @@ return [
         'template_path_stack' => [
             dirname(__DIR__) . '/view',
         ],
-    ],    
+    ],
     'block_layouts' => [
         'invokables' => [
             'JDC' => Site\BlockLayout\JDC::class,
@@ -48,6 +48,5 @@ return [
     'config' => [
         'heading' => 'Titre du jardin',
     ],
-
 
 ];

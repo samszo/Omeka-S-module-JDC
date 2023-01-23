@@ -1,11 +1,10 @@
-<?php
+<?php declare(strict_types=1);
 /**
  * JDC
  *
  * Module pour jardiner des connaissances
  *
  * @copyright Samuel Szoniecky, 2021
-
  */
 
 namespace JDC;
@@ -19,28 +18,23 @@ if (!class_exists(\Generic\AbstractModule::class)) {
 use Generic\AbstractModule;
 use Laminas\EventManager\Event;
 use Laminas\EventManager\SharedEventManagerInterface;
-use Laminas\ServiceManager\ServiceLocatorInterface;
-use Laminas\View\Renderer\PhpRenderer;
 use Laminas\Mvc\Controller\AbstractController;
-use JDC\Form\ConfigForm;
-
+use Laminas\View\Renderer\PhpRenderer;
 
 class Module extends AbstractModule
 {
     const NAMESPACE = __NAMESPACE__;
 
-    var $rsVocabularies = [
-        ['prefix'=>'jdc','label'=>'Jardin des connaissances']
+    public $rsVocabularies = [
+        ['prefix' => 'jdc', 'label' => 'Jardin des connaissances'],
     ];
 
-    var $rsRessourceTemplate = [
-        'Physique'
-        ,'Actant'
-        ,'Concept'
-        ,'Rapport'
+    public $rsRessourceTemplate = [
+        'Physique',
+        'Actant',
+        'Concept',
+        'Rapport',
     ];
-
-
 
     protected function preInstall():void
     {
@@ -79,13 +73,11 @@ class Module extends AbstractModule
         if (!empty($_POST['remove-template'])) {
             foreach ($this->rsRessourceTemplate as $r) {
                 $installResources->removeResourceTemplate($r);
-            }            
+            }
         }
-
     }
 
-
-    public function warnUninstall(Event $event)
+    public function warnUninstall(Event $event): void
     {
         $view = $event->getTarget();
         $module = $view->vars()->module;
@@ -98,14 +90,13 @@ class Module extends AbstractModule
 
         $vocabularyLabels = '';
         foreach ($this->rsVocabularies as $v) {
-            $vocabularyLabels .= $v['label'].' / ';
+            $vocabularyLabels .= $v['label'] . ' / ';
         }
 
         $resourceTemplates = '';
         foreach ($this->rsRessourceTemplate as $r) {
-            $resourceTemplates .= $r["o:label"].' / ';
-        }            
-
+            $resourceTemplates .= $r["o:label"] . ' / ';
+        }
 
         $html = '<p>';
         $html .= '<strong>';
@@ -119,7 +110,7 @@ class Module extends AbstractModule
         $html .= '<label><input name="remove-vocabulary" type="checkbox" form="confirmform">';
         $html .= $t->translate('Remove the vocabularies :<br/>'); // @translate
         foreach ($this->rsVocabularies as $v) {
-            $html .= '"'.$v['label'].'"<br/>'; // @translate
+            $html .= '"' . $v['label'] . '"<br/>'; // @translate
         }
         $html .= '</label>';
 
@@ -129,14 +120,14 @@ class Module extends AbstractModule
         $html .= '<label><input name="remove-template" type="checkbox" form="confirmform">';
         $html .= $t->translate('Remove the resource templates :<br/>'); // @translate
         foreach ($this->rsRessourceTemplate as $rt) {
-            $html .= '"'.$rt.'"<br/>'; // @translate
+            $html .= '"' . $rt . '"<br/>'; // @translate
         }
         $html .= '</label>';
 
         echo $html;
-    }    
+    }
 
-    public function attachListeners(SharedEventManagerInterface $sharedEventManager)
+    public function attachListeners(SharedEventManagerInterface $sharedEventManager): void
     {
         // Display a warn before uninstalling.
         $sharedEventManager->attach(
@@ -146,8 +137,6 @@ class Module extends AbstractModule
         );
     }
 
-
-    
     //
     public function getConfigForm(PhpRenderer $renderer)
     {
@@ -158,11 +147,11 @@ class Module extends AbstractModule
         $settings = $services->get('Omeka\Settings');
         $data = $settings->get('JDCConfigs');
 
-        if(!$data){
+        if (!$data) {
             $defaultSettings = $config['config'];
             foreach ($defaultSettings as $name => $value) {
                 $data[$name] = $settings->get($name, $value);
-            }    
+            }
         }
         $dataForm = [];
         foreach ($data as $key => $value) {
@@ -177,7 +166,6 @@ class Module extends AbstractModule
         return $html;
     }
 
-
     public function handleConfigForm(AbstractController $controller)
     {
         $result = parent::handleConfigForm($controller);
@@ -188,6 +176,5 @@ class Module extends AbstractModule
         $services = $this->getServiceLocator();
         $settings = $services->get('Omeka\Settings');
         $settings->set('JDCConfigs', $data['o:block']['__blockIndex__']['o:data']);
-    }    
-
+    }
 }
