@@ -1,19 +1,22 @@
 <?php declare(strict_types=1);
+
 namespace JDC\View\Helper;
 
 use Laminas\View\Helper\AbstractHelper;
 
-class JDCViewHelper extends AbstractHelper
+class JDC extends AbstractHelper
 {
     protected $api;
     protected $logger;
     protected $settings;
+    protected $connection;
     protected $exiDims;
     protected $rdfDims;
     protected $propsRelations;
     protected $props;
     protected $rcs;
     protected $skosRapports;
+    protected $jdcConfigs;
     public $doublons;
     public $nivMax = 2;//profondeur de la recherche
     public $querySemanticPositionSource;
@@ -22,18 +25,19 @@ class JDCViewHelper extends AbstractHelper
     public $fin;
     public $rs;
 
-    public function __construct($services)
+    public function __construct($api, $logger, $settings, $connection)
     {
-        $this->api = $services['api'];
-        $this->cnx = $services['cnx'];
-        $this->logger = $services['logger'];
-        $this->settings = $services['settings']->get('JDCConfigs');
+        $this->api = $api;
+        $this->logger = $logger;
+        $this->settings = $settings;
+        $this->connection = $connection;
         $this->exiDims = ['Physique','Actant','Concept','Rapport'];
         $this->rdfDims = ['Sujet','Objet','Predicat'];
         $this->props = [];
         $this->rcs = [];
         $this->skosRapports = [];
         $this->propsRelations = [];
+        $this->jdcConfigs = $settings->get('JDCConfigs');
     }
 
     /**
@@ -88,7 +92,7 @@ class JDCViewHelper extends AbstractHelper
         if (class_exists(\Generateur\Generateur\Moteur::class)) {
 
         //création du moteur de génération
-            $m = new \Generateur\Generateur\Moteur(true, $this->api, isset($params['log']) ? $params['log'] : false, $this->cnx);
+            $m = new \Generateur\Generateur\Moteur(true, $this->api, isset($params['log']) ? $params['log'] : false, $this->connection);
             $gen = $m->genereExiJDC($params);
             return $this->getGeneration($gen);
         } else {

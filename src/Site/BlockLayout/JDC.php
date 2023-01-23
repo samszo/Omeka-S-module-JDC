@@ -15,7 +15,7 @@ class JDC extends AbstractBlockLayout
     /**
      * The default partial view script.
      */
-    const PARTIAL_NAME = 'common/block-layout/JDC';
+    const PARTIAL_NAME = 'common/block-layout/jdc';
 
     public function getLabel()
     {
@@ -38,7 +38,8 @@ class JDC extends AbstractBlockLayout
         // Factory is not used to make rendering simpler.
         $services = $site->getServiceLocator();
         $formElementManager = $services->get('FormElementManager');
-        $defaultSettings = $services->get('Config')['JDC']['block_settings']['JDC'];
+        $defaultSettings = $services->get('Config')['jdc']['block_settings']['jdc'];
+        $blockFieldset = \JDC\Form\JdcFieldset::class;
 
         $data = $block ? $block->data() + $defaultSettings : $defaultSettings;
 
@@ -50,8 +51,6 @@ class JDC extends AbstractBlockLayout
         $html = '<p>'
             . $view->translate('Un block pour jardiner des connaissances.') // @translate
             . '</p>';
-
-        $blockFieldset = \JDC\Form\ConfigForm::class;
 
         $fieldset = $formElementManager->get($blockFieldset);
         $fieldset->populateValues($dataForm);
@@ -75,7 +74,6 @@ class JDC extends AbstractBlockLayout
 
     public function prepareRender(PhpRenderer $view): void
     {
-
         /*TODO: vérifier le chargement par le thème du site
         $view->headScript()->appendFile($view->assetUrl('js/bootstrap.min.js','JDC'));
         $view->headScript()->appendFile($view->assetUrl('js/all.min.js','JDC'));

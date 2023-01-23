@@ -136,45 +136,4 @@ class Module extends AbstractModule
             [$this, 'warnUninstall']
         );
     }
-
-    //
-    public function getConfigForm(PhpRenderer $renderer)
-    {
-        // Factory is not used to make rendering simpler.
-        $services = $this->getServiceLocator();
-        $formElementManager = $services->get('FormElementManager');
-        $config = $services->get('Config');
-        $settings = $services->get('Omeka\Settings');
-        $data = $settings->get('JDCConfigs');
-
-        if (!$data) {
-            $defaultSettings = $config['config'];
-            foreach ($defaultSettings as $name => $value) {
-                $data[$name] = $settings->get($name, $value);
-            }
-        }
-        $dataForm = [];
-        foreach ($data as $key => $value) {
-            $dataForm['o:block[__blockIndex__][o:data][' . $key . ']'] = $value;
-        }
-        $blockFieldset = \JDC\Form\ConfigForm::class;
-
-        $fieldset = $formElementManager->get($blockFieldset);
-        $fieldset->populateValues($dataForm);
-
-        $html = $renderer->formCollection($fieldset, false);
-        return $html;
-    }
-
-    public function handleConfigForm(AbstractController $controller)
-    {
-        $result = parent::handleConfigForm($controller);
-        if (!$result) {
-            return false;
-        }
-        $data = $controller->params()->fromPost();
-        $services = $this->getServiceLocator();
-        $settings = $services->get('Omeka\Settings');
-        $settings->set('JDCConfigs', $data['o:block']['__blockIndex__']['o:data']);
-    }
 }
