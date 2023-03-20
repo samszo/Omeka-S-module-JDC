@@ -1,8 +1,8 @@
 <?php declare(strict_types=1);
 namespace JDC\Service\Form;
 
-use JDC\Form\ConfigForm;
 use Interop\Container\ContainerInterface;
+use JDC\Form\ConfigForm;
 use Laminas\ServiceManager\Factory\FactoryInterface;
 
 class ConfigFormFactory implements FactoryInterface
@@ -13,7 +13,7 @@ class ConfigFormFactory implements FactoryInterface
         $settings = $services->get('Omeka\Settings');
         $translator = $services->get('MvcTranslator');
 
-        $form = new ConfigForm(null, $options);
+        $form = new ConfigForm(null, $options ?? []);
         $form->setLocalStorage($basePath);
         $form->setSettings($settings);
         $form->setTranslator($translator);

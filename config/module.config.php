@@ -1,15 +1,16 @@
-<?php
+<?php declare(strict_types=1);
+
 namespace JDC;
 
 return [
-
     'view_helpers' => [
-        
-        'invokables' => [
-            'JDCViewHelper' => View\Helper\JDCViewHelper::class,
-        ],                
         'factories'  => [
-            'JDCFactory' => Service\ViewHelper\JDCFactory::class,
+            'jdc' => Service\ViewHelper\JDCFactory::class,
+        ],
+        // Pour compatibilité avec les anciens thèmes
+        'aliases' => [
+            'JDCViewHelper' => 'jdc',
+            'JDCFactory' => 'jdc',
         ],
 
     ],
@@ -17,10 +18,10 @@ return [
         'template_path_stack' => [
             dirname(__DIR__) . '/view',
         ],
-    ],    
+    ],
     'block_layouts' => [
         'invokables' => [
-            'JDC' => Site\BlockLayout\JDC::class,
+            'jdc' => Site\BlockLayout\JDC::class,
         ],
     ],
     'form_elements' => [
@@ -38,16 +39,11 @@ return [
             ],
         ],
     ],
-    'JDC' => [
+    'jdc' => [
         'block_settings' => [
-            'JDC' => [
+            'jdc' => [
                 'heading' => 'Titre du jardin',
             ],
         ],
     ],
-    'config' => [
-        'heading' => 'Titre du jardin',
-    ],
-
-
 ];

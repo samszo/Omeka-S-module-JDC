@@ -6,14 +6,14 @@ $site = $this->vars('site');
 ?>
 <div class="container" id="jdcMainContainer">
     <div class="row">
-      <?php //echo $this->partial('JDC/nav_tools',['item'=>$item,'heading'=>$this->vars('heading')]);?>
+      <?php //echo $this->partial('jdc/nav_tools',['item'=>$item,'heading'=>$this->vars('heading')]);?>
     </div>
     <div class="row">
       <div id='jdcGraph' class='jdc' ></div>
     </div>
 </div>
-<?php echo $this->partial('JDC/modal_ajoutRapport');?>
-<?php echo $this->partial('JDC/modal_creerDetail');?>
+<?php echo $this->partial('jdc/modal_ajoutRapport');?>
+<?php echo $this->partial('jdc/modal_creerDetail');?>
 
 <script>
   item = <?php echo json_encode($item); ?>;
