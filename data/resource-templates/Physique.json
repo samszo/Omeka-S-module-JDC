@@ -1,5 +1,5 @@
 {
-    "o:label": "JDC Actant",
+    "o:label": "JDC Physique",
     "o:resource_template_property": [
         {
             "o:alternate_label": null,
@@ -31,30 +31,36 @@
             "data_types": [],
             "vocabulary_namespace_uri": "https:\/\/jardindesconnaissances.univ-paris8.fr\/onto\/jdc#",
             "vocabulary_label": "Jardin des connaissances",
-            "local_name": "hasActant",
-            "label": "a comme actant"
+            "local_name": "hasPhysique",
+            "label": "a comme physique"
         },
         {
             "o:alternate_label": null,
             "o:alternate_comment": null,
             "o:is_required": false,
             "o:is_private": false,
-            "data_types": [
-                {
-                    "name": "customvocab:2",
-                    "label": "Menus"
-                }
-            ],
-            "vocabulary_namespace_uri": "https:\/\/jardindesconnaissances.univ-paris8.fr\/onto\/jdc#",
-            "vocabulary_label": "Jardin des connaissances",
-            "local_name": "hasMenu",
-            "label": "a comme menu"
+            "data_types": [],
+            "vocabulary_namespace_uri": "http:\/\/purl.org\/dc\/terms\/",
+            "vocabulary_label": "Dublin Core",
+            "local_name": "isPartOf",
+            "label": "Is Part Of"
+        },
+        {
+            "o:alternate_label": null,
+            "o:alternate_comment": null,
+            "o:is_required": false,
+            "o:is_private": false,
+            "data_types": [],
+            "vocabulary_namespace_uri": "http:\/\/purl.org\/dc\/terms\/",
+            "vocabulary_label": "Dublin Core",
+            "local_name": "hasPart",
+            "label": "Has Part"
         }
     ],
     "o:resource_class": {
         "vocabulary_namespace_uri": "https:\/\/jardindesconnaissances.univ-paris8.fr\/onto\/jdc#",
         "vocabulary_label": "Jardin des connaissances",
-        "local_name": "Actant",
-        "label": "Actant"
+        "local_name": "Physique",
+        "label": "Physique"
     }
 }

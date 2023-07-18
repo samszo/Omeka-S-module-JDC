@@ -1,5 +1,5 @@
 {
-    "o:label": "JDC Actant",
+    "o:label": "JDC Existence",
     "o:resource_template_property": [
         {
             "o:alternate_label": null,
@@ -31,6 +31,17 @@
             "data_types": [],
             "vocabulary_namespace_uri": "https:\/\/jardindesconnaissances.univ-paris8.fr\/onto\/jdc#",
             "vocabulary_label": "Jardin des connaissances",
+            "local_name": "hasPhysique",
+            "label": "a comme physique"
+        },
+        {
+            "o:alternate_label": null,
+            "o:alternate_comment": null,
+            "o:is_required": false,
+            "o:is_private": false,
+            "data_types": [],
+            "vocabulary_namespace_uri": "https:\/\/jardindesconnaissances.univ-paris8.fr\/onto\/jdc#",
+            "vocabulary_label": "Jardin des connaissances",
             "local_name": "hasActant",
             "label": "a comme actant"
         },
@@ -39,22 +50,28 @@
             "o:alternate_comment": null,
             "o:is_required": false,
             "o:is_private": false,
-            "data_types": [
-                {
-                    "name": "customvocab:2",
-                    "label": "Menus"
-                }
-            ],
+            "data_types": [],
             "vocabulary_namespace_uri": "https:\/\/jardindesconnaissances.univ-paris8.fr\/onto\/jdc#",
             "vocabulary_label": "Jardin des connaissances",
-            "local_name": "hasMenu",
-            "label": "a comme menu"
+            "local_name": "hasConcept",
+            "label": "a comme concept"
+        },
+        {
+            "o:alternate_label": null,
+            "o:alternate_comment": null,
+            "o:is_required": false,
+            "o:is_private": false,
+            "data_types": [],
+            "vocabulary_namespace_uri": "https:\/\/jardindesconnaissances.univ-paris8.fr\/onto\/jdc#",
+            "vocabulary_label": "Jardin des connaissances",
+            "local_name": "hasRapport",
+            "label": "a comme rapport"
         }
     ],
     "o:resource_class": {
         "vocabulary_namespace_uri": "https:\/\/jardindesconnaissances.univ-paris8.fr\/onto\/jdc#",
         "vocabulary_label": "Jardin des connaissances",
-        "local_name": "Actant",
-        "label": "Actant"
+        "local_name": "Existence",
+        "label": "Existence"
     }
 }
