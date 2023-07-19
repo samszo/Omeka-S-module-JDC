@@ -1,0 +1,28 @@
+<?php
+$site = $this->vars('site');
+$items = $this->api()->search('items',["site_id"=>$site->id()])->getContent();
+
+?>
+<div class="container" id="jdcMainContainer">
+    <div class="row">
+      <?php //echo $this->partial('JDC/nav_tools',['item'=>$item,'heading'=>$this->vars('heading')]);?>
+    </div>
+    <div class="row">
+      <div id='jdcGraph' class='jdc' ></div>
+    </div>
+</div>
+
+<script type="module">
+  import {jdcPhysiques} from '<?php echo $this->assetUrl('modules/jdcPhysiques.js','JDC');?>';
+
+  let items = <?php echo json_encode($items); ?>,
+    p = new jdcPhysiques({'items':items,
+          'idRoot':<?php echo $this->vars('idRoot');?>,
+          'cont':d3.select('#jdcGraph')
+        });
+
+  window.onload = function() {
+    console.log(items)
+  };
+
+</script>

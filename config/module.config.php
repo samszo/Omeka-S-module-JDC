@@ -21,6 +21,7 @@ return [
     'block_layouts' => [
         'invokables' => [
             'JDC' => Site\BlockLayout\JDC::class,
+            'JDCphysiques' => Site\BlockLayout\JDCphysiques::class,
         ],
     ],
     'form_elements' => [

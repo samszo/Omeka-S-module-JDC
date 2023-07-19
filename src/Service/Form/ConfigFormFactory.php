@@ -13,7 +13,7 @@ class ConfigFormFactory implements FactoryInterface
         $settings = $services->get('Omeka\Settings');
         $translator = $services->get('MvcTranslator');
 
-        $form = new ConfigForm(null, $options);
+        $form = new ConfigForm(null, $options ?? []);
         $form->setLocalStorage($basePath);
         $form->setSettings($settings);
         $form->setTranslator($translator);
