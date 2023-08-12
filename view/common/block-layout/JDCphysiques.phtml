@@ -1,6 +1,7 @@
 <?php
 $site = $this->vars('site');
 $items = $this->api()->search('items',["site_id"=>$site->id()])->getContent();
+$t=1;
 
 ?>
 <div class="container" id="jdcMainContainer">
@@ -8,19 +9,29 @@ $items = $this->api()->search('items',["site_id"=>$site->id()])->getContent();
       <?php //echo $this->partial('JDC/nav_tools',['item'=>$item,'heading'=>$this->vars('heading')]);?>
     </div>
     <div class="row">
+      <input type="hidden" id="inptUrl" value="" />
+      <button id="urlBtn" >Lien direct vers l'événement</button>
       <div id='jdcGraph' class='jdc' ></div>
     </div>
 </div>
 
 <script type="module">
   import {jdcPhysiques} from '<?php echo $this->assetUrl('modules/jdcPhysiques.js','JDC');?>';
+  import {appUrl} from '<?php echo $this->assetUrl('modules/appUrl.js','JDC');?>';
 
   let items = <?php echo json_encode($items); ?>,
+    mainCont = d3.select('#jdcMainContainer'),
+    aUrl = new appUrl({
+        'tgtIn':d3.select("#inptUrl").node(),
+        'tgtBtn':d3.select("#urlBtn"),
+        'url':new URL(document.location)
+      }),
     p = new jdcPhysiques({'items':items,
           'idRoot':<?php echo $this->vars('idRoot');?>,
-          'cont':d3.select('#jdcGraph')
+          'cont':d3.select('#jdcGraph'),
+          'width':mainCont.node().offsetWidth,
+          'aUrl':aUrl
         });
-
   window.onload = function() {
     console.log(items)
   };
