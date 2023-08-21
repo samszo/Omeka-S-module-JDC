@@ -172,3 +172,7 @@ jdc:hasMenu a rdf:Property ;
     rdfs:label "a comme menu" ;
     rdfs:domain o:Resource ;
     vs:term_status "experimental" .
+jdc:hasDimension a rdf:Property ;
+    rdfs:label "a comme dimension" ;
+    rdfs:domain o:Resource ;
+    vs:term_status "experimental" .

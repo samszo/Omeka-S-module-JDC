@@ -6,10 +6,13 @@ use Laminas\View\Helper\AbstractHelper;
 class JDCViewHelper extends AbstractHelper
 {
     protected $api;
+    protected $cnx;
     protected $logger;
     protected $settings;
+    protected $querySql;
     protected $exiDims;
     protected $rdfDims;
+    protected $classToDim;
     protected $propsRelations;
     protected $props;
     protected $rcs;
@@ -21,6 +24,8 @@ class JDCViewHelper extends AbstractHelper
     var $deb;
     var $fin;
     var $rs;
+    var $data;
+    var $keys;
     
     public function __construct($services)
     {
@@ -28,8 +33,50 @@ class JDCViewHelper extends AbstractHelper
       $this->cnx = $services['cnx'];
       $this->logger = $services['logger'];
       $this->settings = $services['settings']->get('JDCConfigs');
+      $this->querySql = $services['querySql'];
       $this->exiDims = ['Physique','Actant','Concept','Rapport'];
       $this->rdfDims = ['Sujet','Objet','Predicat'];
+      $this->classToDim = [
+        'Article'=>'Physique',
+        'Academic Article'=>'Physique',
+        'Book'=>'Physique',
+        'Book Section'=>'Physique',
+        'Project'=>'Physique',
+        'Thesis'=>'Physique',
+        'Webpage'=>'Physique',
+        'Report'=>'Physique',
+        'Document'=>'Physique',
+        'Slideshow'=>'Physique',
+        'Event'=>'Rapport',
+        ''=>'Physique',
+        'ItemSet'=>'Physique',
+        'Media'=>'Physique',
+        'audio-visual document'=>'Physique',
+        'Manuscript'=>'Physique',
+        'Chapter'=>'Physique',
+        'Parcours'=>'Concept',
+        'citation'=>'Physique',
+        'Note'=>'Physique',
+        'Person'=>'Actant',
+        'Person'=>'Actant',
+        'Actant'=>'Actant',
+        'Interactive Resource'=>'Physique',
+        'Mention'=>'Concept',
+        'audio document'=>'Physique',
+        'Annotation'=>'Rapport',
+        'Concept'=>'Concept',
+        'Département'=>'Physique',
+        'Organization'=>'Actant',
+        'Periodical'=>'Physique',
+        'Élément constitutif'=>'Concept',
+        'Unité de Formation et de Recherche'=>'Actant',
+        'Ecole Doctorale'=>'Actant',
+        'Hospital'=>'Actant',
+        'Laboratoire'=>'Actant',
+        'Library'=>'Actant',
+        'School'=>'Actant',
+        'Université'=>'Actant'
+      ];
       $this->props = [];
       $this->rcs = [];
       $this->skosRapports = [];
@@ -39,7 +86,7 @@ class JDCViewHelper extends AbstractHelper
 
 
     /**
-     * Cosntruction du jardin
+     * Construction du jardin
      *
      * @param array $data
      *  
@@ -76,11 +123,121 @@ class JDCViewHelper extends AbstractHelper
         case 'generer':
           $rs = $this->generer($data['params']);
           break;                  
+        case 'getComplexity':
+          $rs = $this->getComplexity($data);
+          break;                  
         default:
           $rs = [];
           break;
       }
       return $rs;
+
+    }
+
+    public function getExiDims(){
+      return $this->exiDims;
+    }
+
+    /** calcule la complexité d'une ressource 
+     *
+     * @param array   $params
+     * @return array
+     */
+    function getComplexity($params){
+      $this->logger->info("complexity START");
+      try {
+        set_time_limit(3600);
+        //récupère les usages des resources
+        $this->data = $this->querySql->__invoke([
+          'id'=>$params["params"]["id"],
+          'action'=>'statResUsed']);
+        $this->logger->info("Data received = ".count($this->data));
+        //récupère les clefs dans le cas de la complexité totale
+        if(!$params["params"]["id"])
+          $this->keys = array_column($this->data, 'id');
+        else
+          $this->keys = false;
+        //initialise le tableau des résultats
+        foreach ($this->exiDims as $d) {
+          $this->rs[$d]=[];
+        }
+        //calcul la complexité pour chaque ressource
+        $maxI = 5;        
+        foreach ($this->data as $i=>$r) {
+          if($i<$maxI)$this->setComplexityResLink($r,1);
+        }
+      } catch (\Exception $e) {
+        throw new \Omeka\Job\Exception\InvalidArgumentException($e->getMessage()); // @translate
+      }          
+      //export le résultat
+      //$params['view']->bulkExport('complexity', ['complexity'=>$this->rs]);
+      $this->logger->info("complexity END");
+      return $this->rs;
+    }
+    public function mapClassToDimension($r){
+      $d = $this->classToDim[$r["class label"]];
+      if(!$d)$d="Physique";
+      return $d;      
+    }
+
+    /** calcule la complexité des ressources liées
+    *
+    * @param array  $r stats de la ressource
+    * @param string $d dimension existentielle
+    * @param int    $n niveau du lien
+    * @param array  $db liste des ressources traitées pour éviter les boucles infinies
+
+    * @return array
+    */
+    function setComplexityResLink($r,$n,$db=[]){
+      //$this->logger->info("setComplexityResLink = ".$r['id'].' - '.$n);
+
+      if($db[$r['id']])return;
+      $d = $this->mapClassToDimension($r);
+      if(!isset($this->rs[$d]))$this->rs[$d]=[1=>0];
+      if(!isset($this->rs[$d][$n]))$this->rs[$d][$n]=0;
+      $this->rs[$d][$n]++;
+      if($r["nbRes"]){
+        $db[$r['id']]=1;
+        //récupère les ressources
+        $rs = explode(',',$r["idsRes"]);
+        $ps = explode(',',$r["propsRes"]);
+        if(count($rs)!=count($ps)){
+          throw new \Omeka\Job\Exception\InvalidArgumentException("Les propriétés ne correspondent pas aux ressources : "+r['id']); // @translate
+        }
+        foreach ($rs as $i=>$id) {
+          if($this->keys){
+            $k = array_search($id, $this->keys);
+            $ni = $k ? $this->data[$k] : false;
+          }else{
+            $k = $this->querySql->__invoke([
+              'id'=>$id,
+              'action'=>'statResUsed']);
+            $ni = $k[0];
+          }
+          /*
+          array_filter($this->data, function($k)  use($id){
+              return $k['id'] == intval($id);
+          });
+          if(count($f)){
+            $ni = $f[key($f)];
+          */
+          if($ni){
+            //ajoute les rapports
+            $keyRapport = $n.'_'.$d.'_'.$this->mapClassToDimension($ni).'_'.$ps[$i];
+            if(!isset($this->rs['Rapport'][$keyRapport]))
+              $this->rs['Rapport'][$keyRapport]=0;
+            $this->rs['Rapport'][$keyRapport]++;
+            if($n < 10)$this->setComplexityResLink($ni,$n+1,$db);
+          }else{
+            throw new \Omeka\Job\Exception\InvalidArgumentException("La ressource n'est pas trouvée : "+r['id']); // @translate
+          }
+        }
+      }
+      if($r["nbUri"]){
+        $this->rs[$d][1]+=$r["nbUri"];
+        //TODO:ajouter le poids de l'uri suivant les liens dans la page Web
+      }
 
     }
 
