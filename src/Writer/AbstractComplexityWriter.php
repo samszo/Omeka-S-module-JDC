@@ -131,32 +131,7 @@ abstract class AbstractComplexityWriter extends AbstractWriter
             return $this;
         }
 
-        $this
-            ->prepareFieldNames($this->options['metadata'], $this->options['metadata_exclude']);
-
-        if (!count($this->fieldNames)) {
-            $this->logger->warn('No headers are used in any resources.'); // @translate
-            $this
-                ->finalizeOutput()
-                ->saveFile();
-            return $this;
-        }
-
-        if ($this->prependFieldNames) {
-            if (isset($this->options['format_fields']) && $this->options['format_fields'] === 'label') {
-                $this->prepareFieldLabels();
-                $this->writeFields($this->fieldLabels);
-            } else {
-                $this->writeFields($this->fieldNames);
-            }
-        }
-
         $this->stats = [];
-        $this->logger->info(
-            '{number} different fields are used in all resources.', // @translate
-            ['number' => count($this->fieldNames)]
-        );
-
         $this->appendResources();
 
         $this
@@ -218,23 +193,114 @@ abstract class AbstractComplexityWriter extends AbstractWriter
             return $this;
         }
 
-        //initialise le tableau des résultats
-        $exiDims = $this->jdc->getExiDims();
-        foreach ($exiDims as $d) {
-            $this->rs[$d]=[];
-        }
+        $this->rs = $this->jdc->initRs();
 
         foreach ($this->options['resource_types'] as $resourceType) {
             if ($this->jobIsStopped) {
                 break;
             }
-            $this->appendResourcesForResourceType($resourceType);
+            $this->rs['infos']['resource_types'][]=$this->mapResourceTypeToSQL($resourceType);                    
+            if(count($this->options['query'])){
+                $this->rs['infos']['query']=$this->options['query'];
+                $this->appendResourcesForResourceType($resourceType);
+            }
+        }    
+        if(count($this->options['query'])==0){
+            $this->rs['infos']['query']='All resources';
+            $this->appendAllResources();
         }
+
+
         $this->logger->info(
             '{processed}/{total} processed, {succeed} succeed, {skipped} skipped.', // @translate
             ['processed' => $this->stats['processed'], 'total' => $this->stats['totals'], 'succeed' => $this->stats['succeed'], 'skipped' => $this->stats['skipped']]
         );
-        $this->writeFields($this->rs);
+        $this->writeFields($this->jdc->setComplexity());
+
+        return $this;
+    }
+
+    protected function mapResourceTypeToSQL($jsonResourceType): ?string
+    {
+        $mapping = [
+            'o:Item' => "Omeka\Entity\Item",
+            'o:Media' => "Omeka\Entity\Media",
+            'o:ItemSet' => "Omeka\Entity\ItemSet",
+            // Modules.
+            'oa:Annotation' => "Annotate\Entity\Annotation",
+        ];
+        return $mapping[$jsonResourceType] ?? null;
+    }
+
+
+    protected function appendAllResources(): self
+    {
+
+        //récupère les usages des resources
+        $this->data = $this->querySQL->__invoke([
+            'action'=>'statResUsed',
+            'resource_types'=>$this->rs['infos']['resource_types']
+        ]);
+        $this->logger->info("Data received = ".count($this->data));
+        //récupère les clefs pour retrouver les ressources liées
+        $this->keys = array_column($this->data, 'id');
+  
+
+        $this->logger->notice(
+            'Starting export of {total}.', // @translate
+            ['total' => $this->stats['totalToProcess']]
+        );
+
+        if ($this->job->shouldStop()) {
+            $this->jobIsStopped = true;
+            $this->logger->warn(
+                'The job "Export" was stopped: {processed}/{total} resources processed.', // @translate
+                ['processed' => $this->stats['processed'], 'total' => $this->stats['totalToProcess']]
+            );
+            return $this;
+        }
+
+        $this->logger->notice(
+            'Starting export of {total}.', // @translate
+            ['total' => $this->stats['totals']]
+        );
+        foreach ($this->data as $r) {
+
+            if ($this->job->shouldStop()) {
+                $this->jobIsStopped = true;
+                $this->logger->warn(
+                    'The job "Export" was stopped: {processed}/{total} resources processed.', // @translate
+                    ['processed' => $this->stats['processed'], 'total' => $this->stats['totals']]
+                );
+                break;            
+            }
+            //calcule la complexité de la ressource
+            $this->jdc->setStats($this->stats);
+            $this->jdc->setRs($this->rs);
+            $this->jdc->setComplexityResource($r,1);
+            $this->stats=$this->jdc->getStats();
+            $this->rs=$this->jdc->getRs();
+
+            ++$this->stats['processed'];  
+            $this->logger->info(
+                '{processed}/{total} => {totals} : {id}.', // @translate
+                ['processed' => $this->stats['processed'], 'total' => $this->stats['totalToProcess'], 'totals' => $this->stats['totals'], 'id' => $d['id']]
+            );
+            ++$this->stats['succeed'];
+            ++$this->stats['processed'];
+        }
+
+        $this->logger->info(
+            '{processed}/{total} processed, {succeed} succeed, {skipped} skipped.', // @translate
+            ['processed' => $this->stats['processed'], 'total' => $this->stats['total'], 'succeed' => $this->stats['succeed'], 'skipped' => $this->stats['skipped']]
+        );
+
+        // Avoid memory issue.
+        unset($this->data);
+        $this->logger->notice(
+            'End export of {total}.', // @translate
+            ['total' => $this->stats['totals']]
+        );
 
         return $this;
     }
@@ -317,7 +383,14 @@ abstract class AbstractComplexityWriter extends AbstractWriter
                         );
                         break;
                     }
-                    $this->setComplexityResLink($d,1);
+
+                    //calcule la complexité de la ressource
+                    $this->jdc->setStats($this->stats);
+                    $this->jdc->setRs($this->rs);
+                    $this->jdc->setComplexityResource($d,1);
+                    $this->stats=$this->jdc->getStats();
+                    $this->rs=$this->jdc->getRs();
+        
                     ++$this->stats['processed'];  
                     $this->logger->info(
                         '{processed}/{total} => {totals} : {id}.', // @translate
@@ -358,63 +431,6 @@ abstract class AbstractComplexityWriter extends AbstractWriter
 
         return $this;
     }
-
-
-  
-      /** calcule la complexité des ressources liées
-      *
-      * @param array  $r stats de la ressource
-      * @param string $d dimension existentielle
-      * @param int    $n niveau du lien
-      * @param array  $db liste des ressources traitées pour éviter les boucles infinies
-  
-      * @return array
-      */
-      function setComplexityResLink($r,$n,$db=[]){
-        //$this->logger->info("setComplexityResLink = ".$r['id'].' - '.$n);
-  
-        if($db[$r['id']])return;
-        $d = $this->jdc->mapClassToDimension($r);
-        if(!isset($this->rs[$d]))$this->rs[$d]=[1=>0];
-        if(!isset($this->rs[$d][$n]))$this->rs[$d][$n]=0;
-        $this->rs[$d][$n]++;
-        if($r["nbRes"]){
-          $db[$r['id']]=1;
-          //récupère les ressources
-          $rs = explode(',',$r["idsRes"]);
-          $ps = explode(',',$r["propsRes"]);
-          if(count($rs)!=count($ps)){
-            throw new \Omeka\Job\Exception\InvalidArgumentException("Les propriétés ne correspondent pas aux ressources : "+r['id']); // @translate
-          }
-          foreach ($rs as $i=>$id) {
-            if($this->keys){
-              $k = array_search($id, $this->keys);
-              $ni = $k ? $this->data[$k] : false;
-            }else{
-              $k = $this->querySQL->__invoke([
-                'id'=>$id,
-                'action'=>'statResUsed']);
-              $ni = $k[0];
-            }
-            if($ni){
-              //ajoute les rapports
-              $keyRapport = $n.'_'.$d.'_'.$this->jdc->mapClassToDimension($ni).'_'.$ps[$i];
-              if(!isset($this->rs['Rapport'][$keyRapport]))
-                $this->rs['Rapport'][$keyRapport]=0;
-              $this->rs['Rapport'][$keyRapport]++;
-              $this->setComplexityResLink($ni,$n+1,$db);
-            }else{
-              throw new \Omeka\Job\Exception\InvalidArgumentException("La ressource n'est pas trouvée : "+r['id']); // @translate
-            }
-          }
-        }
-        if($r["nbUri"]){
-          $this->rs[$d][1]+=$r["nbUri"];
-          //TODO:ajouter le poids de l'uri suivant les liens dans la page Web
-        }
-        ++$this->stats['totals'];  
-      }        
-
 
     protected function countResources(): array
     {
