@@ -156,7 +156,8 @@ class JDCViewHelper extends AbstractHelper
             $this->rs[$d]=[];
         }
         $this->rs['infos']=[
-          "date"=>date(DATE_ATOM)
+          "date"=>date(DATE_ATOM),
+          "resources"=>[]
         ];
 
     }
@@ -170,16 +171,36 @@ class JDCViewHelper extends AbstractHelper
       $this->logger->info("complexity START");
       try {
         set_time_limit(3600);
+
         //récupère les usages des resources
+        $ids = [];
+        if($params["params"]["property"]){
+          $q = $params["params"];
+          unset($q['json']);
+          unset($q['id']);
+          unset($q['helper']);
+          unset($q["nivMax"]);          
+          $arrR= ["items","media","item_sets","annotations"];
+          foreach ($arrR as $apiResource) {
+            $response = $this->api->search($apiResource, $q, ['responseContent' => 'reference']);
+            $rs = $response->getContent();
+            foreach ($rs as $r) {
+              $ids[]=$r->id();
+            }
+          }
+          if (!count($ids)) throw new \Omeka\Job\Exception\InvalidArgumentException("query is not goog"); // @translate  
+        }        
         $this->data = $this->querySql->__invoke([
           'id'=>$params["params"]["id"],
+          'ids'=>$ids,
           'action'=>'statResUsed']);
         $this->logger->info("Data received = ".count($this->data));
         //récupère les clefs dans le cas de la complexité totale
-        if(!$params["params"]["id"])
+        if(!$params["params"]["id"] && !count($ids))
           $this->keys = array_column($this->data, 'id');
-        else
+        else{
           $this->keys = false;
+        }  
         //
         $this->nivMax = isset($params["params"]["nivMax"]) ? $params["params"]["nivMax"] : 1000;
         //initialise le tableau des résultats
@@ -228,7 +249,7 @@ class JDCViewHelper extends AbstractHelper
             foreach ($this->rs['Rapport'] as $k=>$r) {
               $a = explode('_',$k);
               if(count($a)==3)$a[3]='';
-              $c["Rapport"]['details'][]=['n'=>$a[0],'s'=>$a[1],'o'=>$a[2],'p'=>$a[3],'nb'=>$r,'c'=>$r*$a[0]];
+              $c["Rapport"]['details'][]=['n'=>intval($a[0]),'s'=>$a[1],'o'=>$a[2],'p'=>$a[3],'nb'=>$r,'c'=>$r*$a[0]];
               $cd += $r*$a[0];
               $nbD += $r;
               $nbN ++;
@@ -252,9 +273,21 @@ class JDCViewHelper extends AbstractHelper
           $nTMin = $nTMin < $nMin ? $nTMin : $nMin;
           $nTMax = $nTMax > $nMax ? $nTMax : $nMax;      
       }
-      $c['totals']=['nbNiv'=>$nbTN,'nivMin'=>$nTMin,'nivMax'=>$nTMax,'nb'=>$nbT, 'c'=>$cT];
+      $c['totals']=['nbNiv'=>$nbTN,'nivMin'=>intval($nTMin),'nivMax'=>$nTMax,'nb'=>$nbT, 'c'=>$cT];
 
       return $c;
+    }
+
+    protected function mapResourceSQLToApi($resourceSQL): ?string
+    {
+        $mapping = [
+            "Omeka\Entity\Item"=>"items",
+            "Omeka\Entity\Media"=>"media",
+            "Omeka\Entity\ItemSet"=>"item_sets",
+            // Modules.
+            "Annotate\Entity\Annotation"=>"annotations",
+        ];
+        return $mapping[$resourceSQL];
     }
 
 
@@ -276,6 +309,14 @@ class JDCViewHelper extends AbstractHelper
       //incrémente la dimension de la classe de la ressource
       $d = $this->mapClassToDimension($r);
       
+      //on ajoute les données de la resource
+      //if($n==1){
+        $o = $this->mapResourceSQLToApi($r['resource_type']);
+        $c = $this->api->read($o, $r['id'])->getContent();
+        $this->rs['infos']["resources"][]=['type'=>$o,'id'=>$c->id(),'title'=>$c->displayTitle(),'d'=>$d,'n'=>$n];
+      //}
+
+
       if($d=='Rapport')$this->incrementeRapport($n.'_'.$d.'_'.$r["class label"],1);
       else {
         if(!isset($this->rs[$d]))$this->rs[$d]=[1=>0];
