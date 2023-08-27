@@ -17,7 +17,7 @@ class JDCViewHelper extends AbstractHelper
     protected $props;
     protected $rcs;
     protected $skosRapports;
-    var $doublons;
+    var $doublons=[];
     var $nivMax=2;//profondeur de la recherche
     var $querySemanticPositionSource;
     var $querySemanticPositionTarget;
@@ -159,18 +159,21 @@ class JDCViewHelper extends AbstractHelper
           "date"=>date(DATE_ATOM),
           "resources"=>[]
         ];
-
+        return $this->rs;
     }
 
     /** calcule la complexité d'une ressource 
      *
      * @param array   $params
+     * @param array   $db
      * @return array
      */
-    function getComplexity($params){
+    function getComplexity($params,$db=[]){
       $this->logger->info("complexity START");
       try {
-        set_time_limit(3600);
+        if(!$db){
+          set_time_limit(3600);
+        }
 
         //récupère les usages des resources
         $ids = [];
@@ -206,11 +209,11 @@ class JDCViewHelper extends AbstractHelper
         //initialise le tableau des résultats
         $this->initRs();
         $this->rs['infos']['params']=$params["params"];
-        //calcul la complexité pour chaque ressource
+        //calcul la complexité de l'ensemble des ressources
         foreach ($this->data as $i=>$r) {
           $this->setComplexityResource($r,1);
         }
-        $c = $this->setComplexity();
+        $c = $this->setComplexity($db);        
       } catch (\Exception $e) {
         throw new \Omeka\Job\Exception\InvalidArgumentException($e->getMessage()); // @translate
       }          
@@ -224,10 +227,11 @@ class JDCViewHelper extends AbstractHelper
     }
 
     /** calcule la complexité
-    *
+    * @param array   $db
     * @return array
     */
-    public function setComplexity(){
+    public function setComplexity($db=[]){
+      //ini_set('memory_limit', '2G');  
       $c = [
         "infos"=>$this->rs['infos'],
       ];
@@ -248,8 +252,7 @@ class JDCViewHelper extends AbstractHelper
           if($d=='Rapport'){            
             foreach ($this->rs['Rapport'] as $k=>$r) {
               $a = explode('_',$k);
-              if(count($a)==3)$a[3]='';
-              $c["Rapport"]['details'][]=['n'=>intval($a[0]),'s'=>$a[1],'o'=>$a[2],'p'=>$a[3],'nb'=>$r,'c'=>$r*$a[0]];
+              $c["Rapport"]['details'][]=['ns'=>intval($a[0]),'no'=>intval($a[1]),'s'=>$a[2],'o'=>$a[3],'p'=>$a[4],'nb'=>$r,'c'=>$r*$a[0]];
               $cd += $r*$a[0];
               $nbD += $r;
               $nbN ++;
@@ -275,9 +278,24 @@ class JDCViewHelper extends AbstractHelper
       }
       $c['totals']=['nbNiv'=>$nbTN,'nivMin'=>intval($nTMin),'nivMax'=>$nTMax,'nb'=>$nbT, 'c'=>$cT];
 
+      //calcule la complexité de chaque ressource une seule fois
+      if(!$db){
+        foreach ($c['infos']['resources'] as $r) {
+          if(!$db[$r['id']]){
+            $db[$r['id']]=1;
+            $p = ['params'=>['id'=>$r['id']]];
+            $cx = $this->getComplexity($p,$db);
+            $c['infos']["resources"][$this->doublons[$r['id']]]['ic']=$cx['totals']['c'];
+            $c['infos']["resources"][$this->doublons[$r['id']]]['c']=$cx;
+            // Avoid memory issue.
+            unset($cx);
+            unset($this->rs);
+          }
+        }  
+      }
+      //
       return $c;
     }
-
     protected function mapResourceSQLToApi($resourceSQL): ?string
     {
         $mapping = [
@@ -300,6 +318,101 @@ class JDCViewHelper extends AbstractHelper
 
     * @return array
     */
+    /*
+    public function setComplexityResource($r,$n,$db=[]){
+      //$this->logger->info("setComplexityResource = ".$r['id'].' - '.$n);
+
+      //vérifie les boucles sans fin = ressource enfant lié à une ressource parent 
+      if($db[$r['id']])return;
+      $db[$r['id']]=1;
+
+      //incrémente la dimension de la classe de la ressource
+      $d = $this->mapClassToDimension($r);
+      
+      //on ajoute les données de la resource
+      if(!$this->doublons[$r['id']]){
+        $this->doublons[$r['id']] = count($this->rs['infos']["resources"]);
+        $o = $this->mapResourceSQLToApi($r['resource_type']);
+        $ro = $this->api->read($o, $r['id'])->getContent();
+        $this->rs['infos']["resources"][]=['type'=>$o,'id'=>$r['id'],'title'=>$ro->displayTitle()
+          ,'d'=>$d,'n'=>[$n]];
+      }else{
+        $this->rs['infos']["resources"][$this->doublons[$r['id']]]['n'][]=$n;
+      } 
+
+
+
+      if($d=='Rapport')$this->incrementeRapport($n.'_'.$n.'_'.$d.'_'.$r["class label"],1);
+      else {
+        if(!isset($this->rs[$d]))$this->rs[$d]=[1=>0];
+        if(!isset($this->rs[$d][$n]))$this->rs[$d][$n]=0;
+        $this->rs[$d][$n]++;
+      }
+
+      //calcule la complexité des propriétés
+      //incrémente les concepts = propriété
+      $this->rs['Concept'][($n)]+=$r["nbProp"];
+      //incrémente les physiques = valeur
+      $this->rs['Physique'][($n)]+=$r["nbVal"];
+      //incrémente les rapports
+      $this->incrementeRapport($n.'_0_'.$d.'_Concept'.'_properties',$r["nbProp"]);
+      $this->incrementeRapport($n.'_'.$n.'_'.$d.'_Physique'.'_values',$r["nbVal"]);
+
+      //calcule la complexité des owners
+      if($r["nbOwner"]){
+        //récupère les ressources
+        $rs = explode(',',$r["idsOwner"]);
+        foreach ($rs as $i=>$id) {
+          if(!$db['owner'.$id]){
+            $db['owner'.$id]=1;
+            //ajoute les rapports
+            $this->rs['Actant'][$n]++;
+            $this->incrementeRapport($n.'_'.$n.'_'.$d.'_Actant'.'_owner',1);
+          }
+        }
+      }
+
+      //calcule les rapports des ressources liées
+      if($r["nbRes"]){
+        //récupère les ressources
+        $rs = explode(',',$r["idsRes"]);
+        $ps = explode(',',$r["propsRes"]);
+        if(count($rs)!=count($ps)){
+          throw new \Omeka\Job\Exception\InvalidArgumentException("Les propriétés ne correspondent pas aux ressources : "+r['id']); // @translate
+        }
+        foreach ($rs as $i=>$id) {
+          $db[$id]=1;
+          if($this->keys){
+            $k = array_search($id, $this->keys);
+            $ni = $k ? $this->data[$k] : false;
+          }else{
+            $k = $this->querySql->__invoke([
+              'id'=>$id,
+              'action'=>'statResUsed']);
+            $ni = $k[0];
+          }
+          if($ni){
+            //ajoute les rapports
+            $this->incrementeRapport($n.'_'.($n+1).'_'.$d.'_'.$this->mapClassToDimension($ni).'_'.$ps[$i],1);
+            //calcule la complexité de la ressource liés
+            if($this->nivMax > $n)$this->setComplexityResource($ni,$n+1,$db);
+          }else{
+            throw new \Omeka\Job\Exception\InvalidArgumentException("La ressource n'est pas trouvée : "+$r['id']); // @translate
+          }
+        }
+      }
+
+      //calcule les rapports des uri
+      if($r["nbUri"]){
+        $this->incrementeRapport($n.'_'.$n.'_'.$d.'_Physique'.'_uri',$r["nbUri"]);
+        //TODO:ajouter le poids de l'uri suivant les liens dans la page Web
+      }
+
+      ++$this->stats['totals'];  
+      return $this->rs;
+    }        
+    */
+
     public function setComplexityResource($r,$n,$db=[]){
       //$this->logger->info("setComplexityResource = ".$r['id'].' - '.$n);
 
@@ -310,14 +423,18 @@ class JDCViewHelper extends AbstractHelper
       $d = $this->mapClassToDimension($r);
       
       //on ajoute les données de la resource
-      //if($n==1){
+      if(!$this->doublons[$r['id']]){
+        $this->doublons[$r['id']] = count($this->rs['infos']["resources"]);
         $o = $this->mapResourceSQLToApi($r['resource_type']);
-        $c = $this->api->read($o, $r['id'])->getContent();
-        $this->rs['infos']["resources"][]=['type'=>$o,'id'=>$c->id(),'title'=>$c->displayTitle(),'d'=>$d,'n'=>$n];
-      //}
+        $ro = $this->api->read($o, $r['id'])->getContent();
+        $this->rs['infos']["resources"][]=['type'=>$o,'id'=>$r['id'],'title'=>$ro->displayTitle()
+          ,'d'=>$d,'n'=>[$n]];
+      }else{
+        $this->rs['infos']["resources"][$this->doublons[$r['id']]]['n'][]=$n;
+      } 
 
 
-      if($d=='Rapport')$this->incrementeRapport($n.'_'.$d.'_'.$r["class label"],1);
+      if($d=='Rapport')$this->incrementeRapport($n.'_'.$n.'_'.$d.'_'.$r["class label"],1);
       else {
         if(!isset($this->rs[$d]))$this->rs[$d]=[1=>0];
         if(!isset($this->rs[$d][$n]))$this->rs[$d][$n]=0;
@@ -326,16 +443,26 @@ class JDCViewHelper extends AbstractHelper
 
       //calcule la complexité des propriétés
       //incrémente les concepts = propriété
-      $this->rs['Concept'][($n+1)]+=$r["nbProp"];
+      $this->rs['Concept'][($n)]+=$r["nbProp"];
       //incrémente les physiques = valeur
-      $this->rs['Physique'][($n+1)]+=$r["nbVal"];
+      $this->rs['Physique'][($n)]+=$r["nbVal"];
       //incrémente les rapports
-      $this->incrementeRapport($n.'_'.$d.'_properties',$r["nbProp"]);
-      $this->incrementeRapport($n.'_'.$d.'_values',$r["nbVal"]);
+      $this->incrementeRapport($n.'_0_'.$d.'_Concept'.'_properties',$r["nbProp"]);
+      $this->incrementeRapport($n.'_'.$n.'_'.$d.'_Physique'.'_values',$r["nbVal"]);
 
-      //calcule la complexité des actants
-      $this->rs['Actant'][$n]+=$r["nbOwner"];
-      $this->incrementeRapport($n.'_'.$d.'_actant',$r["nbOwner"]);
+      //calcule la complexité des owners
+      if($r["nbOwner"]){
+        //récupère les ressources
+        $rs = explode(',',$r["idsOwner"]);
+        foreach ($rs as $i=>$id) {
+          if(!$db['owner'.$id]){
+            $db['owner'.$id]=1;
+            //ajoute les rapports
+            $this->rs['Actant'][$n]++;
+            $this->incrementeRapport($n.'_'.$n.'_'.$d.'_Actant_Physique',1);
+          }
+        }
+      }
 
       //calcule les rapports des ressources liées
       if($r["nbRes"]){
@@ -358,7 +485,7 @@ class JDCViewHelper extends AbstractHelper
           }
           if($ni){
             //ajoute les rapports
-            $this->incrementeRapport($n.'_'.$d.'_'.$this->mapClassToDimension($ni).'_'.$ps[$i],1);
+            $this->incrementeRapport($n.'_'.($n+1).'_'.$d.'_'.$this->mapClassToDimension($ni).'_'.$ps[$i],1);
             //calcule la complexité de la ressource liés
             if($this->nivMax > $n)$this->setComplexityResource($ni,$n+1,$db);
           }else{
@@ -369,13 +496,13 @@ class JDCViewHelper extends AbstractHelper
 
       //calcule les rapports des uri
       if($r["nbUri"]){
-        $this->incrementeRapport($n.'_'.$d.'_uri',$r["nbUri"]);
+        $this->incrementeRapport($n.'_'.$n.'_'.$d.'_Physique'.'_uri',$r["nbUri"]);
         //TODO:ajouter le poids de l'uri suivant les liens dans la page Web
       }
 
       ++$this->stats['totals'];  
       return $this->rs;
-    }        
+    }     
 
     function incrementeRapport($k,$v){
       if(!isset($this->rs['Rapport'][$k]))$this->rs['Rapport'][$k]=0;
