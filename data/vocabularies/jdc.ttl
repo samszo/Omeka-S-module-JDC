@@ -176,3 +176,11 @@ jdc:hasDimension a rdf:Property ;
     rdfs:label "a comme dimension" ;
     rdfs:domain o:Resource ;
     vs:term_status "experimental" .
+jdc:complexity a rdf:Property ;
+    rdfs:label "Complexité" ;
+    rdfs:domain o:Resource ;
+    vs:term_status "experimental" .
+jdc:complexityDetails a rdf:Property ;
+    rdfs:label "Détails de la complexité" ;
+    rdfs:domain o:Resource ;
+    vs:term_status "experimental" .

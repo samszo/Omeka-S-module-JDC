@@ -35,12 +35,11 @@ $api = $plugins->get('api');
 $space = strtolower(__NAMESPACE__);
 
 
-if (version_compare($oldVersion, '3.0.1', '<')) {
+if (version_compare($oldVersion, '0.0.8', '<')) {
     $this->checkDependency();
     $installResources = $installResources();
     $installResources->checkAllResources('JDC');
     $installResources->createAllResources('JDC');
-
 }
 
 

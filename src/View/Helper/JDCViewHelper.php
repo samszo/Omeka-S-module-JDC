@@ -280,7 +280,7 @@ class JDCViewHelper extends AbstractHelper
       $c['totals']=['nbNiv'=>$nbTN,'nivMin'=>intval($nTMin),'nivMax'=>$nTMax,'nb'=>$nbT, 'c'=>$cT];
 
       //calcule la complexité de chaque ressource une seule fois
-      if(!$db && $this->addResource){
+      if(!$db){
         foreach ($c['infos']['resources'] as $r) {
           /*ATTENTION : pour des raisons de performance
           on ne prend pas en compte 
@@ -288,26 +288,53 @@ class JDCViewHelper extends AbstractHelper
           = on ne calcule pas la complexité des "Linked resources"
           */  
           $db[$r['id']]=1;
-          if($db[$r['id']] < 2 && $r['isValue']){
+          if($db[$r['id']] < 2 && $r['isValue'] && $r['n'][0]==1){
             $db[$r['id']]=2;
             $p = ['params'=>['id'=>$r['id']]];
             $cx = $this->getComplexity($p,$db);
             $c['infos']["resources"][$this->doublons[$r['id']]]['ic']=$cx['totals']['c'];
-            $c['infos']["resources"][$this->doublons[$r['id']]]['c']=$cx;
+            //TROP GOURMAND
+            //$c['infos']["resources"][$this->doublons[$r['id']]]['c']=$cx['totals'];            
+            $this->saveComplexity($r,$cx);
             // Avoid memory issue.
             unset($cx);
-            //unset($this->rs);
+            unset($this->rs);
           }else{
-            if(!$c['infos']["resources"][$this->doublons[$r['id']]]['ic'])
-              $c['infos']["resources"][$this->doublons[$r['id']]]['ic']='no';
-            if(!$c['infos']["resources"][$this->doublons[$r['id']]]['c'])
-              $c['infos']["resources"][$this->doublons[$r['id']]]['c']='no';
+            $c['infos']["resources"][$this->doublons[$r['id']]]['ic']=
+              $r['details']['jdc:complexity'] ? $r['details']['jdc:complexity'][0]['@value'] : "no";
           }
+          //supprime les details de la ressource pour minimiser le transfert
+          unset($c['infos']["resources"][$this->doublons[$r['id']]]['details']);            
+
         }  
       }
       //
       return $c;
     }
+    protected function saveComplexity($r,$cx){
+      // met à jour la complexité de la ressource
+      $newValue = $r['details'];
+      $oP =  $this->getProp('jdc:complexity');
+      $newValue[$oP->term()]=[];
+      $newValue[$oP->term()][] = [
+        '@value'=>$cx['totals']['c']."",        
+        'property_id'=>$oP->id(),
+        'type'=>'literal'
+      ];
+      /* 
+      $oP =  $this->getProp('jdc:complexityDetails');
+      $newValue[$oP->term()]=[];
+      $newValue[$oP->term()][] = [
+        '@value'=>json_encode($cx),        
+        'property_id'=>$oP->id(),
+        'type'=>'literal'
+      ]; 
+      */
+      $rslt = $this->api->update('items', $r['id'], $newValue, [], ['continueOnError' => false,'isPartial'=>1]);
+      unset($newValue);
+
+    }
+
     protected function mapResourceSQLToApi($resourceSQL): ?string
     {
         $mapping = [
@@ -363,7 +390,7 @@ class JDCViewHelper extends AbstractHelper
       }
 
       //calcule les rapports des ressources ayant comme valeur 
-      //la ressource en coursde niveau 1
+      //la ressource en cours de niveau 1
       if($n==1){
         $rsL = $this->querySql->__invoke([
           'vrid'=>$r['id'],
@@ -376,11 +403,11 @@ class JDCViewHelper extends AbstractHelper
             $this->rs[$dl][($n+1)]+=1;
             //ajoute les rapports
             $this->incrementeRapport(($n+1).'_'.($n).'_'.$dl.'_'.$d.'_'.$l['propsRes'],1);
+            //on ajoute les données de la resource
+            if($this->addResource)$this->addDataToResource($l,$dl,$n+1,false);            
             //ATTENTION : ne pas faire pour éviter le calcul de la base entière
             //calcule la complexité de la ressource liés
             //if($this->nivMax > $n)$this->setComplexityResource($ni,$n+1,$db);
-            //on ajoute les données de la resource
-            if($this->addResource)$this->addDataToResource($l,$dl,$n+1,false);            
           }
         }  
       }
@@ -433,7 +460,7 @@ class JDCViewHelper extends AbstractHelper
         $o = $this->mapResourceSQLToApi($r['resource_type']);
         $ro = $this->api->read($o, $r['id'])->getContent();
         $this->rs['infos']["resources"][]=['type'=>$o,'id'=>$r['id'],'title'=>$ro->displayTitle()
-          ,'d'=>$d,'n'=>[$n],'isValue'=>$isValue];
+          ,'d'=>$d,'n'=>[$n],'isValue'=>$isValue, 'details'=>json_decode(json_encode($ro), true)];
       }else{
         $this->rs['infos']["resources"][$this->doublons[$r['id']]]['n'][]=$n;
       } 
