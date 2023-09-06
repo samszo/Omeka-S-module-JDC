@@ -184,3 +184,12 @@ jdc:complexityDetails a rdf:Property ;
     rdfs:label "Détails de la complexité" ;
     rdfs:domain o:Resource ;
     vs:term_status "experimental" .
+jdc:complexityTotals a rdf:Property ;
+    rdfs:label "Totaux de la complexité" ;
+    rdfs:domain o:Resource ;
+    vs:term_status "experimental" .
+jdc:existentialComplexity a rdfs:Class ;
+    rdfs:label "Complexité exitentielle" ;
+    rdfs:domain o:Resource ;
+    owl:sameAs skos:Concept;
+    vs:term_status "experimental" .

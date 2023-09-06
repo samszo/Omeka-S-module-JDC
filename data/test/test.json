@@ -1,0 +1,241 @@
+{
+    "infos": {
+        "date": "2023-09-03T07:00:21+00:00",
+        "resources": [{
+            "type": "items",
+            "id": 301734,
+            "title": "G\u00e9n\u00e9rateurs",
+            "class": "Chapter",
+            "complexity": "64",
+            "d": "Physique",
+            "n": [1],
+            "isValue": true,
+            "details": {
+                "@context": "http:\/\/localhost\/samszo\/omk\/api-context",
+                "@id": "http:\/\/localhost\/samszo\/omk\/api\/items\/301734",
+                "@type": ["o:Item", "schema:Chapter"],
+                "o:id": 301734,
+                "o:is_public": true,
+                "o:owner": {
+                    "@id": "http:\/\/localhost\/samszo\/omk\/api\/users\/1",
+                    "o:id": 1
+                },
+                "o:resource_class": {
+                    "@id": "http:\/\/localhost\/samszo\/omk\/api\/resource_classes\/665",
+                    "o:id": 665
+                },
+                "o:resource_template": null,
+                "o:thumbnail": null,
+                "o:title": "G\u00e9n\u00e9rateurs",
+                "thumbnail_display_urls": {
+                    "large": null,
+                    "medium": null,
+                    "square": null
+                },
+                "o:created": {
+                    "@value": "2023-08-09T05:00:47+00:00",
+                    "@type": "http:\/\/www.w3.org\/2001\/XMLSchema#dateTime"
+                },
+                "o:modified": {
+                    "@value": "2023-09-02T07:49:35+00:00",
+                    "@type": "http:\/\/www.w3.org\/2001\/XMLSchema#dateTime"
+                },
+                "o:primary_media": null,
+                "o:media": [],
+                "o:item_set": [],
+                "o:site": [{
+                    "@id": "http:\/\/localhost\/samszo\/omk\/api\/sites\/2",
+                    "o:id": 2
+                }, {
+                    "@id": "http:\/\/localhost\/samszo\/omk\/api\/sites\/3",
+                    "o:id": 3
+                }],
+                "dcterms:title": [{
+                    "type": "literal",
+                    "property_id": 1,
+                    "property_label": "Title",
+                    "is_public": true,
+                    "@value": "G\u00e9n\u00e9rateurs"
+                }],
+                "dcterms:isPartOf": [{
+                    "type": "resource",
+                    "property_id": 33,
+                    "property_label": "Is Part Of",
+                    "is_public": true,
+                    "@id": "http:\/\/localhost\/samszo\/omk\/api\/items\/299386",
+                    "value_resource_id": 299386,
+                    "value_resource_name": "items",
+                    "url": "\/samszo\/omk\/s\/cartoaffect\/item\/299386",
+                    "display_title": "Conception et d\u00e9veloppement d\u2019outils"
+                }],
+                "jdc:complexity": [{
+                    "type": "literal",
+                    "property_id": 2259,
+                    "property_label": "Complexit\u00e9",
+                    "is_public": true,
+                    "@value": "64"
+                }],
+                "@reverse": {
+                    "dcterms:isPartOf": [{
+                        "@id": "http:\/\/localhost\/samszo\/omk\/api\/resources\/299739",
+                        "o:title": "GAPAII"
+                    }, {
+                        "@id": "http:\/\/localhost\/samszo\/omk\/api\/resources\/299720",
+                        "o:title": "mesostiche"
+                    }, {
+                        "@id": "http:\/\/localhost\/samszo\/omk\/api\/resources\/301828",
+                        "o:title": "gen_fake"
+                    }, {
+                        "@id": "http:\/\/localhost\/samszo\/omk\/api\/resources\/301893",
+                        "o:title": "G\u00e9n\u00e9rateurs d\u0027images"
+                    }, {
+                        "@id": "http:\/\/localhost\/samszo\/omk\/api\/resources\/301894",
+                        "o:title": "G\u00e9n\u00e9rateurs fictionnels"
+                    }, {
+                        "@id": "http:\/\/localhost\/samszo\/omk\/api\/resources\/301895",
+                        "o:title": "G\u00e9n\u00e9rateurs Balpiens"
+                    }]
+                }
+            }
+        }, {
+            "type": "items",
+            "id": 299386,
+            "title": "Conception et d\u00e9veloppement d\u2019outils",
+            "class": "Chapter",
+            "complexity": "64",
+            "d": "Physique",
+            "n": [2],
+            "isValue": true,
+            "details": "no"
+        }],
+        "params": {
+            "json": "1",
+            "helper": "JDC",
+            "action": "getComplexity",
+            "id": "301734"
+        }
+    },
+    "Physique": {
+        "details": [{
+            "n": 1,
+            "nb": 4,
+            "c": 4
+        }, {
+            "n": 2,
+            "nb": 7,
+            "c": 14
+        }],
+        "totals": {
+            "nbNiv": 2,
+            "nivMin": 1,
+            "nivMax": 2,
+            "nb": 11,
+            "c": 18
+        }
+    },
+    "Actant": {
+        "details": [{
+            "n": 1,
+            "nb": 1,
+            "c": 1
+        }],
+        "totals": {
+            "nbNiv": 1,
+            "nivMin": 1,
+            "nivMax": 1,
+            "nb": 1,
+            "c": 1
+        }
+    },
+    "Concept": {
+        "details": [{
+            "n": 1,
+            "nb": 3,
+            "c": 3
+        }, {
+            "n": 2,
+            "nb": 6,
+            "c": 12
+        }],
+        "totals": {
+            "nbNiv": 2,
+            "nivMin": 1,
+            "nivMax": 2,
+            "nb": 9,
+            "c": 15
+        }
+    },
+    "Rapport": {
+        "details": [{
+            "ns": 1,
+            "no": 1,
+            "s": "Physique",
+            "o": "Concept",
+            "p": "properties",
+            "nb": 3,
+            "c": 3
+        }, {
+            "ns": 1,
+            "no": 1,
+            "s": "Physique",
+            "o": "Physique",
+            "p": "values",
+            "nb": 3,
+            "c": 3
+        }, {
+            "ns": 1,
+            "no": 1,
+            "s": "Actant",
+            "o": "Physique",
+            "p": "owner",
+            "nb": 1,
+            "c": 1
+        }, {
+            "ns": 1,
+            "no": 1,
+            "s": "Physique",
+            "o": "Physique",
+            "p": "dcterms:isPartOf",
+            "nb": 1,
+            "c": 1
+        }, {
+            "ns": 2,
+            "no": 2,
+            "s": "Physique",
+            "o": "Concept",
+            "p": "properties",
+            "nb": 6,
+            "c": 12
+        }, {
+            "ns": 2,
+            "no": 2,
+            "s": "Physique",
+            "o": "Physique",
+            "p": "values",
+            "nb": 6,
+            "c": 12
+        }, {
+            "ns": 2,
+            "no": 2,
+            "s": "Physique",
+            "o": "Physique",
+            "p": "dcterms:isPartOf",
+            "nb": 1,
+            "c": 2
+        }],
+        "totals": {
+            "nbNiv": 7,
+            "nivMin": "1",
+            "nivMax": "2",
+            "nb": 21,
+            "c": 34
+        }
+    },
+    "totals": {
+        "nbNiv": 12,
+        "nivMin": 1,
+        "nivMax": "2",
+        "nb": 42,
+        "c": 68
+    }
+}
