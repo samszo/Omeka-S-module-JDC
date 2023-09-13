@@ -7,9 +7,11 @@ return [
         
         'invokables' => [
             'JDCViewHelper' => View\Helper\JDCViewHelper::class,
+            'JDCSqlViewHelper' => View\Helper\JDCSqlViewHelper::class,
         ],                
         'factories'  => [
             'JDCFactory' => Service\ViewHelper\JDCFactory::class,
+            'JDCSqlFactory' => Service\ViewHelper\JDCSqlFactory::class,
         ],
 
     ],

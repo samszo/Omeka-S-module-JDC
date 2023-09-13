@@ -33,7 +33,7 @@ class JDCViewHelper extends AbstractHelper
     var $stats;
     //liste précisant pour chaque propriétés utilisées avec comme valeur une ressource 
     //les niveaux autorisés pour l'algorithme de maillage du réseau
-    //pour la liste des propriétés cf. /s/cartoaffect/page/ajax?json=1&helper=SQL&action=propValueResource
+    //pour la liste des propriétés cf. /s/cartoaffect/page/ajax?json=1&helper=JDCSql&action=propValueResource
     var $propsValueResource = [
       "dcterms:creator"=>['in'=>0,'out'=>0],
       "dcterms:contributor"=>['in'=>0,'out'=>0],
@@ -275,6 +275,7 @@ class JDCViewHelper extends AbstractHelper
         "infos"=>$cxCount['infos'],
         "csv"=>[]
       ];
+      $c['csv'][]=array('dimension', 'niv (sujet)', 'niv objet','sujet','objet','prédicat','nb','c');
       //calcule la complexité pour chaque dimension et au total
       $cT = 0;
       $nbT = 0;
@@ -293,7 +294,7 @@ class JDCViewHelper extends AbstractHelper
             foreach ($cxCount['Rapport'] as $k=>$r) {
               $a = explode('_',$k);
               $c["Rapport"]['details'][]=['ns'=>intval($a[0]),'no'=>intval($a[1]),'s'=>$a[2],'o'=>$a[3],'p'=>$a[4],'nb'=>$r,'c'=>$r*$a[0]];
-              $c["csv"][]=[$d,intval($a[0]),intval($a[1]),$a[2],$a[3],$a[4],$r,'c'=>$r*$a[0]];
+              $c['csv'][]=array($d,intval($a[0]),intval($a[1]),$a[2],$a[3],$a[4],$r,$r*$a[0]);
               $cd += $r*$a[0];
               $nbD += $r;
               $nbN ++;
@@ -303,7 +304,7 @@ class JDCViewHelper extends AbstractHelper
           }else{
             foreach ($cxCount[$d] as $k=>$r) {
               $c[$d]['details'][]=['n'=>$k,'nb'=>$r,'c'=>$r*$k];
-              $c["csv"][]=[$d,$k,'','','','',$r,$r*$k];
+              $c['csv'][]=array($d,$k,'','','','',$r,$r*$k);
               $cd += $r*$k;
               $nbD += $r;
               $nbN ++;
@@ -393,7 +394,7 @@ class JDCViewHelper extends AbstractHelper
             .$cx[$d]['totals']['nivMin'].','        
             .$cx[$d]['totals']['nivMax'].','        
             .$cx[$d]['totals']['nb'].','        
-            .$cx[$d]['totals']['c'].',',        
+            .$cx[$d]['totals']['c'],        
           'property_id'=>$oP->id(),
           'type'=>'literal',
         ];

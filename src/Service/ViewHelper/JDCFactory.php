@@ -14,7 +14,7 @@ class JDCFactory implements FactoryInterface
             ,'logger' => $services->get('Omeka\Logger')
             ,'settings' => $services->get('Omeka\Settings')
             ,'cnx' => $services->get('Omeka\Connection')
-            ,'querySql' => $services->get('ViewHelperManager')->get('QuerySqlFactory'),
+            ,'querySql' => $services->get('ViewHelperManager')->get('JDCSqlFactory'),
 
         ];         
         return new JDCViewHelper($arrS);
