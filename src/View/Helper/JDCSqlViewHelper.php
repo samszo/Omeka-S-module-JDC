@@ -104,8 +104,12 @@ class JDCSqlViewHelper extends AbstractHelper
 
         //création de la valeur de la ressource
         $query = "INSERT INTO `value` (`value`,`property_id`, `type`,`resource_id`,`is_public`,`value_annotation_id`)  VALUES
-            (?, ?, 'literal', ?, 1, ?)";
-        $rs = $this->conn->executeStatement($query,[$params['vals']['value'],$params['vals']['property_id'],$params['vals']['id'],$aId]);
+            (?, ?, ?, ?, 1, ?)";
+        $rs = $this->conn->executeStatement($query,
+            [$params['vals']['value'],
+            $params['vals']['property_id'],
+            $params['vals']['type'],
+            $params['vals']['id'],$aId]);
         return $rs;       
     }
     /**

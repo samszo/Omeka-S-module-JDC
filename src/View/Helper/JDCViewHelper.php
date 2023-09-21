@@ -350,7 +350,8 @@ class JDCViewHelper extends AbstractHelper
       //PLUS RAPIDE
       //TODO: gérer les sécurités
       $params = ['vals'=>[
-        'value'=>$cx['totals']['c']."",        
+        'value'=>$cx['totals']['c']."",
+        'type' => "numeric:integer", //nécessite le module Numeric Data Type        
         'property_id'=>$oP->id(),
         '@annotation'=>$this->getAnnotationFromComplexity($cx),
         'owner'=>$r['infos']['resources'][0]['details']['o:owner']['o:id'],
