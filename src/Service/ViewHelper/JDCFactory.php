@@ -9,13 +9,13 @@ class JDCFactory implements FactoryInterface
 {
     public function __invoke(ContainerInterface $services, $requestedName, array $options = null)
     {
-        $arrS = [
+        $arrS = [            
             'api'=>$services->get('Omeka\ApiManager')
             ,'logger' => $services->get('Omeka\Logger')
             ,'settings' => $services->get('Omeka\Settings')
             ,'cnx' => $services->get('Omeka\Connection')
-            ,'querySql' => $services->get('ViewHelperManager')->get('JDCSqlFactory'),
-
+            ,'querySql' => $services->get('ViewHelperManager')->get('JDCSqlFactory')
+            ,'auth' => $services->get('Omeka\AuthenticationService')
         ];         
         return new JDCViewHelper($arrS);
     }

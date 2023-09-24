@@ -17,6 +17,8 @@ class JDCViewHelper extends AbstractHelper
     protected $props;
     protected $rcs;
     protected $skosRapports;
+    protected $auth;
+    protected $user;
     var $doublons=[];
     var $maillage=[];
     var $nivMax=2;//profondeur de la recherche
@@ -66,6 +68,7 @@ class JDCViewHelper extends AbstractHelper
 
     public function __construct($services)
     {
+      $this->auth = $services['auth'];
       $this->api = $services['api'];
       $this->cnx = $services['cnx'];
       $this->logger = $services['logger'];
@@ -131,6 +134,8 @@ class JDCViewHelper extends AbstractHelper
      */
     public function __invoke($data)
     {
+      $this->user = $this->auth->getIdentity();                      
+
       if(!isset($data['params']['action']))return [];
       switch ($data['params']['action']) {
         case 'createDim':
@@ -348,13 +353,15 @@ class JDCViewHelper extends AbstractHelper
       unset($rslt);
       */
       //PLUS RAPIDE
-      //TODO: gérer les sécurités
+      /*TODO: gérer les sécurités
+        - ne pas enregistrer une nouvelle complexité quand $this->user est null
+      */
       $params = ['vals'=>[
         'value'=>$cx['totals']['c']."",
         'type' => "numeric:integer", //nécessite le module Numeric Data Type        
         'property_id'=>$oP->id(),
         '@annotation'=>$this->getAnnotationFromComplexity($cx),
-        'owner'=>$r['infos']['resources'][0]['details']['o:owner']['o:id'],
+        'owner'=>$this->user ? $this->user->getid() : 1,
         'id'=>$r['infos']['resources'][0]['id']
       ]];
       if($r['infos']['resources'][0]['complexity'] && $r['infos']['resources'][0]['complexity']!="?")
@@ -680,7 +687,8 @@ class JDCViewHelper extends AbstractHelper
       if(!$cxCur)$cxCur=$this->cxCurCount;
       if(!$cxTot)$cxTot=$this->cxCount;
       foreach ($cxCur as $k => $v) {
-          if($k=="infos"){
+          /*if($k=="infos"){
+            les ressources sont déjà ajoutées dans addDataToResource pour filtrer les doublons
             if($this->addResource){
               foreach ($v['resources'] as $kr => $vr) {
                 $kf = array_search($vr['id'], array_column($cxTot['infos']['resources'],'id'));
@@ -692,6 +700,8 @@ class JDCViewHelper extends AbstractHelper
               }  
             }
           }else{
+          */
+          if($k!="infos"){
             foreach ($v as $k1 => $v1) {
               if(!isset($cxTot[$k][$k1]))$cxTot[$k][$k1]=0; 
               $cxTot[$k][$k1]+=$v1;  
@@ -704,18 +714,21 @@ class JDCViewHelper extends AbstractHelper
     function addDataToResource($r,$d,$n,$isValue=true){
       //on ajoute les données de la resource
       if(!$this->doublons[$r['id']]){
-        $this->doublons[$r['id']] = count($this->cxCurCount['infos']["resources"]);
+        $this->doublons[$r['id']] = count($this->cxCount['infos']["resources"]);
         $o = $this->mapResourceSQLToApi($r['resource_type']);
         $ro = $this->api->read($o, $r['id'])->getContent();
-        $this->cxCurCount['infos']["resources"][]=['type'=>$o,'id'=>$r['id']
+        $infos=['type'=>$o,'id'=>$r['id']
           ,'title'=>$ro->displayTitle(),'class'=>$r['class label']
           ,'complexity'=>$ro->value('jdc:complexity') ? $ro->value('jdc:complexity')->asHtml() : '?'
           ,'d'=>$d,'n'=>[$n],'isValue'=>$isValue
           ,'details'=>$n==1 ? json_decode(json_encode($ro), true):'no'
         ];
+        $this->cxCount['infos']["resources"][]=$infos;
+        $this->cxCurCount['infos']["resources"][]=$infos;
         unset($ro);
       }else{
-        $this->cxCurCount['infos']["resources"][$this->doublons[$r['id']]]['n'][]=$n;
+        $this->cxCount['infos']["resources"][$this->doublons[$r['id']]]['n'][]=$n;
+        $this->cxCurCount['infos']["resources"][]=$this->cxCount['infos']["resources"][$this->doublons[$r['id']]];
       } 
     }
 
