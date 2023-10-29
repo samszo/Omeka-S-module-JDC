@@ -48,10 +48,44 @@ class JDCSqlViewHelper extends AbstractHelper
             case 'complexityFrequency':
                 $result = $this->complexityFrequency($params);
                 break;                                                           
+            case 'complexityDetails':
+                $result = $this->complexityDetails($params);
+                break;                                                           
         }
 
         return $result;
 
+    }
+
+
+   /**
+     * renvoie la liste des ressource concerné 
+     *
+     * @param array    $params paramètre de la requête
+     * @return array
+     */
+    function complexityDetails($params){
+        $p=$this->api->search('properties', ['term' => 'jdc:complexityTotals'])->getContent()[0];
+        $query="SELECT 
+        -- MIN(va.cpx) minCpx,
+        -- MAX(va.cpx) maxCpx,
+        -- SUM(va.cpx) sumCpx,
+        COUNT(*) nbCpx,
+        va.cpx,
+        va.dim
+        FROM (
+        SELECT 
+        CAST(SUBSTRING_INDEX(v.value, ',', -1) AS INTEGER) cpx,
+        SUBSTRING_INDEX(v.value, ',', 1) dim
+                FROM
+            value v
+        WHERE
+            v.property_id = ".$p->id()." 
+        ) va
+        GROUP BY va.dim, va.cpx
+        ORDER BY  va.cpx DESC";
+        $rs = $this->conn->fetchAll($query);
+        return $rs;       
     }
 
 
@@ -84,9 +118,6 @@ class JDCSqlViewHelper extends AbstractHelper
         $rs = $this->conn->fetchAll($query);
         return $rs;       
     }
-
-    
-    
 
     /**
      * calcul la complexité totale 
