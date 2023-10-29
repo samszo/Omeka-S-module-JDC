@@ -66,25 +66,17 @@ class JDCSqlViewHelper extends AbstractHelper
      */
     function complexityDetails($params){
         $p=$this->api->search('properties', ['term' => 'jdc:complexityTotals'])->getContent()[0];
-        $query="SELECT 
-        -- MIN(va.cpx) minCpx,
-        -- MAX(va.cpx) maxCpx,
-        -- SUM(va.cpx) sumCpx,
-        COUNT(*) nbCpx,
-        va.cpx,
-        va.dim
-        FROM (
-        SELECT 
-        CAST(SUBSTRING_INDEX(v.value, ',', -1) AS INTEGER) cpx,
-        SUBSTRING_INDEX(v.value, ',', 1) dim
-                FROM
-            value v
+        $query="SELECT r.id, r.resource_type, r.title
+        FROM value va
+            INNER JOIN value v on v.value_annotation_id = va.resource_id
+            INNER JOIN resource r on r.id = v.resource_id
         WHERE
-            v.property_id = ".$p->id()." 
-        ) va
-        GROUP BY va.dim, va.cpx
-        ORDER BY  va.cpx DESC";
-        $rs = $this->conn->fetchAll($query);
+            va.property_id = ? 
+            AND SUBSTRING_INDEX(va.value, ',', 1) = ? 
+            AND CAST(SUBSTRING_INDEX(va.value, ',', -1) AS INTEGER) = ? 
+        ";
+        $rs = $this->conn->fetchAll($query,[$p->id(),$params['dim'],$params['cpx']]);
+                
         return $rs;       
     }
 
@@ -102,19 +94,22 @@ class JDCSqlViewHelper extends AbstractHelper
         -- MAX(va.cpx) maxCpx,
         -- SUM(va.cpx) sumCpx,
         COUNT(*) nbCpx,
-        va.cpx,
-        va.dim
+        vCT.cpx,
+        vCT.dim,
+        GROUP_CONCAT(DISTINCT vCT.rt) rt
         FROM (
         SELECT 
-        CAST(SUBSTRING_INDEX(v.value, ',', -1) AS INTEGER) cpx,
-        SUBSTRING_INDEX(v.value, ',', 1) dim
-                FROM
-            value v
+            CAST(SUBSTRING_INDEX(va.value, ',', -1) AS INTEGER) cpx,
+            SUBSTRING_INDEX(va.value, ',', 1) dim,
+            r.resource_type rt
+        FROM value va
+            INNER JOIN value v on v.value_annotation_id = va.resource_id
+            INNER JOIN resource r on r.id = v.resource_id
         WHERE
-            v.property_id = ".$p->id()." 
-        ) va
-        GROUP BY va.dim, va.cpx
-        ORDER BY  va.cpx DESC";
+            va.property_id = ".$p->id()." 
+        ) vCT
+        GROUP BY vCT.dim, vCT.cpx
+        ORDER BY vCT.cpx DESC";
         $rs = $this->conn->fetchAll($query);
         return $rs;       
     }
