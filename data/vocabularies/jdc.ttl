@@ -77,6 +77,21 @@ jdc:yRatingValue a rdf:Property ;
     rdfs:domain o:Resource ;
     vs:term_status "experimental" .
 
+jdc:hexaQ a rdf:Property ;
+    rdfs:label "Colonne dans la grille hexagonale" ;
+    rdfs:domain o:Resource ;
+    vs:term_status "experimental" .
+
+jdc:hexaR a rdf:Property ;
+    rdfs:label "Ligne dans la grille hexagonale" ;
+    rdfs:domain o:Resource ;
+    vs:term_status "experimental" .
+
+jdc:hexaS a rdf:Property ;
+    rdfs:label "Tranche dans la grille hexagonale" ;
+    rdfs:domain o:Resource ;
+    vs:term_status "experimental" .
+
 jdc:degradName a rdf:Property ;
     rdfs:label "degradName" ;
     rdfs:domain o:Resource ;
