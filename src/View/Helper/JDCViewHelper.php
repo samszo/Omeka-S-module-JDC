@@ -235,7 +235,7 @@ class JDCViewHelper extends AbstractHelper
               $ids[]=$r->id();
             }
           }
-          if (!count($ids)) throw new \Omeka\Job\Exception\InvalidArgumentException("query is not goog"); // @translate  
+          if (!count($ids)) throw new \Omeka\Job\Exception\InvalidArgumentException("query is not good"); // @translate  
         }        
         $this->data = $this->querySql->__invoke([
           'id'=>$params["params"]["id"],
