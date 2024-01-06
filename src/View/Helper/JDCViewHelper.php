@@ -240,7 +240,7 @@ class JDCViewHelper extends AbstractHelper
         $this->data = $this->querySql->__invoke([
           'id'=>$params["params"]["id"],
           'ids'=>$ids,
-          'action'=>'statResUsed']);
+          'action'=>'statResUsed'],$this->props);
 
         $this->logger->info("Data received = ".count($this->data));
         //récupère les clefs dans le cas de la complexité totale
@@ -265,6 +265,7 @@ class JDCViewHelper extends AbstractHelper
       $this->logger->info("complexity END");
       return $c;
     }
+
     public function mapClassToDimension($r){
       $d = $this->classToDim[$r["class label"]];
       if(!$d)$d="Physique";
@@ -364,7 +365,8 @@ class JDCViewHelper extends AbstractHelper
         'owner'=>$this->user ? $this->user->getid() : 1,
         'id'=>$r['infos']['resources'][0]['id']
       ]];
-      if($r['infos']['resources'][0]['complexity'] && $r['infos']['resources'][0]['complexity']!="?")
+      //On ajoute une complexité quand la complexité n'existe pas ou qu'elle est différente depuis la dernière valeur
+      if($r['infos']['resources'][0]['complexity'] && $r['infos']['resources'][0]['complexity']!="?")  
         $params['action']='complexityUpdateValue';
       else
         $params['action']='complexityInsertValue';
@@ -460,7 +462,7 @@ class JDCViewHelper extends AbstractHelper
         //ou 
         //les valeurs ressource = in
         $params = [($InOut=='in'?'id':'vrid')=>$idS,'action'=>'statResUsed'];
-        $rsLr = $this->querySql->__invoke($params);
+        $rsLr = $this->querySql->__invoke($params,$this->props);
         foreach ($rsLr as $r) {
           if($r["nbRes"]){
             //récupère les ressources
@@ -497,12 +499,21 @@ class JDCViewHelper extends AbstractHelper
     }
 
 
-    public function setComplexityResource($r,$n,$db=[],$isValueResource=false,$isLinkedResource=false){
+
+    /** calcule la complexité d'une ressource
+     * les contrainte pour définir les rapports sont décrite ici : https://samszo.github.io/HDR/principesCarto.html#fig-contraintesRapports
+    * @param    array   $r ressource à calculer
+    * @param    int     $n le niveau de la ressource
+    * @param    array   $db les doublons déjà calculés
+    * @param    boolean $isValueResource précise si la ressource est une valeur ressource = interne
+    * @return   array   le décompte courant de lacomplexité
+    */
+    public function setComplexityResource($r,$n,$db=[],$isValueResource=false){
       //$this->logger->info("setComplexityResource = ".$r['id'].' - '.$n);
 
       //vérifie les boucles sans fin = 
       //ressource dont l'enfant est lié à une ressource parente de cette ressource 
-      if($db[$r['id']]>1 && !$isLinkedResource)return;
+      if($db[$r['id']]>1)return;
       $db[$r['id']]=isset($db[$r['id']]) ? $db[$r['id']]+1 : 1;
 
       //enregistre le décompte pour cette ressource 
@@ -530,8 +541,8 @@ class JDCViewHelper extends AbstractHelper
       //incrémente les physiques = valeur
       $this->cxCurCount['Physique'][($n)]+=$r["nbVal"];
       //incrémente les rapports
-      $this->incrementeRapport($n.'_'.$n.'_'.$d.'_Concept'.'_properties',$r["nbProp"]);
-      $this->incrementeRapport($n.'_'.$n.'_'.$d.'_Physique'.'_values',$r["nbVal"]);
+      $this->incrementeRapport($n.'_'.$n.'_Actant_Concept_properties',$r["nbProp"]);
+      $this->incrementeRapport($n.'_'.$n.'_Actant_Physique_values',$r["nbVal"]);
 
       //calcule la complexité des owners
       if($r["nbOwner"]){
@@ -542,7 +553,7 @@ class JDCViewHelper extends AbstractHelper
             $db['owner'.$id]=1;
             //ajoute les rapports
             $this->cxCurCount['Actant'][1]++;
-            $this->incrementeRapport('1_'.$n.$d.'_Actant_Physique_owner',1);
+            $this->incrementeRapport('1_'.$n.'_Actant_Physique_owner',1);
           }
         }
       }
@@ -550,42 +561,44 @@ class JDCViewHelper extends AbstractHelper
       /*ATTENTION la complexité se calcule uniquement avec les ressource interne
       //calcule les rapports des ressources ayant comme valeur 
       //la ressource en cours = ressource externe
-      //sauf si c'est une ressource interne
+      //sauf si : 
+        une ressource externe est en cours de calcul
+      */
       if(!$isValueResource){
         $rsL = $this->querySql->__invoke([
           'vrid'=>$r['id'],
-          'action'=>'statResUsed']);
+          'action'=>'statResUsed'],$this->props);
         foreach ($rsL as $l) {
           $db[$l['id']]=isset($db[$l['id']]) ? $db[$l['id']]+1 : 1;
-          if($n==1 || ($db[$l['id']]<2 && $l['propsRes']=='dcterms:isPartOf')){
-            //ajoute la complexité de la resource liées
-            $dl = $this->mapClassToDimension($l);
-            $this->cxCurCount[$dl][($n+1)]+=1;
-            //ajoute les rapports
-            $this->incrementeRapport(($n+1).'_'.($n).'_'.$dl.'_'.$d.'_'.$l['propsRes'],1);
-            //ATTENTION : ne pas faire pour éviter le calcul de la base entière
-            //sauf pour la propriété dcterms:isPartOf
-            //calcule la complexité de la ressource liés
-            if($this->nivMax > $n && $l['propsRes']=='dcterms:isPartOf'){
-              //récupère la description de la ressource
-              $k = $this->querySql->__invoke([
-                'id'=>$l['id'],
-                'action'=>'statResUsed']);
-              $this->setComplexityResource($k[0],$n+1,$db,false,true);
-            }
-            ++$this->stats['processed'];  
-            $this->logger->notice(
-              'add external resource = {processed} / {niv}: {id} ({nb}).', // @translate
-              ['processed' => $this->stats['processed'], 'niv' => $n,'id' => $l['id'], 'nb'=>$db[$l['id']]]
-            );
-
+          //ajoute la complexité de la resource liées
+          $dl = $this->mapClassToDimension($l);
+          $this->cxCurCount[$dl][($n+1)]+=1;
+          //ajoute les rapports
+          $this->incrementeRapport(($n+1).'_'.($n).'_Actant_'.$dl.'_'.$l['propsRes'],1);
+          //calcule la complexité de la ressource liés
+          if($this->nivMax > $n){
+            //récupère la description de la ressource
+            $k = $this->querySql->__invoke([
+              'id'=>$l['id'],
+              'action'=>'statResUsed'],$this->props);
+            $this->setComplexityResource($k[0],$n+1,$db,true);
           }
+          ++$this->stats['processed'];  
+          /*
+          $this->logger->notice(
+            'add external resource = {processed} / {niv}: {id} ({nb}).', // @translate
+            ['processed' => $this->stats['processed'], 'niv' => $n,'id' => $l['id'], 'nb'=>$db[$l['id']]]
+          );
+          */
         }  
       }
-      */
 
-      //calcule les rapports des valeurs ressources = ressource interne
-      if($r["nbRes"]){
+      /*
+      calcule les rapports des valeurs ressources = ressource interne
+      sauf si : 
+        une ressource externe est en cours de calcul
+      */      
+      if(!$isValueResource && $r["nbRes"]){
         //récupère les ressources
         $rs = explode(',',$r["idsRes"]);
         $ps = explode(',',$r["propsRes"]);
@@ -597,8 +610,9 @@ class JDCViewHelper extends AbstractHelper
           $db[$ni['id']]=isset($db[$ni['id']]) ? $db[$ni['id']]+1 : 1;
           if($db[$ni['id']]<2){
             //ajoute les rapports
-            $this->incrementeRapport($n.'_'.($n).'_'.$d.'_'.$this->mapClassToDimension($ni).'_'.$ps[$i],1);
-            //calcule la complexité de la ressource liés su 1 niveau
+            //$this->incrementeRapport($n.'_'.($n).'_'.$d.'_'.$this->mapClassToDimension($ni).'_'.$ps[$i],1);
+            $this->incrementeRapport($n.'_'.($n).'_Actant_'.$this->mapClassToDimension($ni).'_'.$ps[$i],1);
+            //calcule la complexité de la ressource liés sur 1 niveau
             if($n<2)$this->setComplexityResource($ni,$n+1,$db,true);
             ++$this->stats['processed'];  
           }
@@ -606,8 +620,11 @@ class JDCViewHelper extends AbstractHelper
       }      
 
 
-      //calcule les rapports des media
-      if($r["nbMedia"]){
+      /*calcule les rapports des media
+      sauf si : 
+        une ressource externe est en cours de calcul
+      */      
+      if(!$isValueResource && $r["nbMedia"]){
         //récupère les ressources
         $rs = explode(',',$r["idsMedia"]);
         foreach ($rs as $i=>$id) {
@@ -615,7 +632,8 @@ class JDCViewHelper extends AbstractHelper
           $db[$ni['id']]=isset($db[$ni['id']]) ? $db[$ni['id']]+1 : 1;
           if($db[$ni['id']]<2){
             //ajoute les rapports
-            $this->incrementeRapport($n.'_'.($n).'_'.$d.'_'.$this->mapClassToDimension($ni).'_media',1);
+            //$this->incrementeRapport($n.'_'.($n).'_'.$d.'_'.$this->mapClassToDimension($ni).'_media',1);
+            $this->incrementeRapport($n.'_'.($n).'_Actant_'.$this->mapClassToDimension($ni).'_media',1);
             //calcule la complexité de la ressource liés su 1 niveau
             if($n<2)$this->setComplexityResource($ni,$n+1,$db,true);
             ++$this->stats['processed'];  
@@ -625,7 +643,8 @@ class JDCViewHelper extends AbstractHelper
 
       //calcule les rapports des uri
       if($r["nbUri"]){
-        $this->incrementeRapport($n.'_'.$n.'_'.$d.'_Physique'.'_uri',$r["nbUri"]);
+        //$this->incrementeRapport($n.'_'.$n.'_'.$d.'_Physique'.'_uri',$r["nbUri"]);
+        $this->incrementeRapport($n.'_'.$n.'_Actant_Physique'.'_uri',$r["nbUri"]);
         //TODO:ajouter le poids de l'uri suivant les liens dans la page Web
       }
 
@@ -638,9 +657,10 @@ class JDCViewHelper extends AbstractHelper
           $db[$ni['id']]=isset($db[$ni['id']]) ? $db[$ni['id']]+1 : 1;
           if($db[$ni['id']]<2){
             //ajoute les rapports
-            $this->incrementeRapport($n.'_'.($n).'_'.$d.'_'.$this->mapClassToDimension($ni).'_itemInSet',1);
+            //$this->incrementeRapport($n.'_'.($n).'_'.$d.'_'.$this->mapClassToDimension($ni).'_itemInSet',1);
+            $this->incrementeRapport($n.'_'.($n).'_Actant_'.$this->mapClassToDimension($ni).'_itemInSet',1);
             //calcule la complexité de la ressource liés
-            if($n<2)$this->setComplexityResource($ni,$n,$db,true);
+            $this->setComplexityResource($ni,$n,$db,false);
             $cxItemSetCount=$this->cumulComplexity($this->cxCurCount,$cxItemSetCount);
             ++$this->stats['processed'];  
           }
@@ -673,7 +693,7 @@ class JDCViewHelper extends AbstractHelper
       }else{
         $k = $this->querySql->__invoke([
           'id'=>$id,
-          'action'=>'statResUsed']);
+          'action'=>'statResUsed'],$this->props);
         $ni = $k[0];
       }
       if($ni){

@@ -7,6 +7,7 @@ class JDCSqlViewHelper extends AbstractHelper
 {
     protected $api;
     protected $conn;
+    protected $props;
 
     public function __construct($api, $conn)
     {
@@ -20,9 +21,10 @@ class JDCSqlViewHelper extends AbstractHelper
      * @param array     $params paramètre de l'action
      * @return array
      */
-    public function __invoke($params=[])
+    public function __invoke($params=[],$props=[])
     {
         if($params==[])return[];
+        if($props!=[])$this->props = $props;
         switch ($params['action']) {
             case 'statClassUsed':
                 $result = $this->statClassUsed($params);
@@ -182,26 +184,37 @@ class JDCSqlViewHelper extends AbstractHelper
      * @return array
      */
     function complexityUpdateValue($params){
-        //récupère les identifiants
-        $query ="SELECT id, value_annotation_id FROM value v WHERE v.property_id = ? AND v.resource_id = ?";
+        //récupère les denier identifiants
+        $query ="SELECT id, value_annotation_id, v.value FROM value v WHERE v.property_id = ? AND v.resource_id = ? ORDER BY id DESC";
         $rs = $this->conn->fetchAll($query,[$params['vals']['property_id'],$params['vals']['id']]);
         $aId = $rs[0]['value_annotation_id'];
         $vId = $rs[0]['id'];
+        $v = $rs[0]['value'];
 
-        //mise à jour les resources
+        /*mise à jour d'une seul valeur de complexité
         $query ="UPDATE `resource` SET `modified`=NOW() WHERE id IN (".$params['vals']['id'].",".$aId.")";
         $rs = $this->conn->executeStatement($query);
-
         //supression des valeurs de l'annotation
         $query ="DELETE FROM `value` WHERE resource_id = ".$aId;
         $rs = $this->conn->executeStatement($query);
-
         //création des nouvelles valeurs
         $this->complexityInsertAnnotationValues($aId,$params['vals']);
-
         //mise à jour de la valeur de la ressource
         $query ="UPDATE value v SET v.value = ? WHERE v.id = ?";
         $rs = $this->conn->executeStatement($query,[$params['vals']['value'],$vId]);
+        */
+
+        //ajoute une nouvelle annotation si la valeur totale est différente
+        /*ATTENTION : il ne faut pas prendre en compte la propriété de complexité dans le calcul 
+            sinon on change la complexité à chaque calcul
+            car premier calcul = pas de complexité
+                deuxième calcul = une complexité est déjà calculée => la complexité augmente
+                troisième calcul = deux complexité sont déjà calculée => la complexité augmente
+                etc...            
+        */
+        if($params['vals']['value']!=$v){
+            $rs = $this->complexityInsertValue($params);
+        }
         return $rs;       
     }
 
@@ -270,6 +283,13 @@ class JDCSqlViewHelper extends AbstractHelper
         return $rs;       
     }
 
+    function getProp($p){
+        if(!isset($this->props[$p]))
+          $this->props[$p]=$this->api->search('properties', ['term' => $p])->getContent()[0];
+        return $this->props[$p];
+      }
+  
+
     /**
      * renvoie les statistiques d'utilisation d'une ressource
      *
@@ -281,6 +301,8 @@ class JDCSqlViewHelper extends AbstractHelper
 
         //ATTENTION: on ne prend pas en compte toutes les ressources mais uniquement certains types
         $resourceTypes = ["Annotate\Entity\Annotation","Omeka\Entity\Item","Omeka\Entity\Media","Omeka\Entity\ItemSet"];
+        //ATTENTION: on exclue les propriétés de complexité pour éviter d'augmenter la complexité à chaque calcul cf. $this.complexityUpdateValue
+        $oP =  $this->getProp('jdc:complexity');
         $query ="SELECT 
                 r.id,
                 COUNT(v.id) nbVal,
@@ -314,30 +336,31 @@ class JDCSqlViewHelper extends AbstractHelper
                     LEFT JOIN
                 vocabulary vo ON vo.id = p.vocabulary_id
                 ";
+        $where = " WHERE v.property_id != ".$oP->id();
         if($params["id"]){
-            $query .= " WHERE r.id = ?";
+            $query .= $where." AND r.id = ?";
             $rs = $this->conn->fetchAll($query,[$params["id"]]);
         }elseif ($params["ids"]) {
-            $query .= " WHERE r.id IN (";
+            $query .= $where." AND r.id IN (";
             $query .= implode(',', array_fill(0, count($params['ids']), '?'));
             $query .= ")   
                 GROUP BY r.id ";
             $rs = $this->conn->fetchAll($query,$params["ids"]);
         }elseif ($params['resource_types']){
             ini_set('memory_limit', '2048M');
-            $query .= " WHERE r.resource_type IN (";
+            $query .= $where." AND r.resource_type IN (";
             $query .= implode(',', array_fill(0, count($params['resource_types']), '?'));
             $query .= ")  
                 GROUP BY r.id ";
             $rs = $this->conn->fetchAll($query,$params['resource_types']);
         }elseif($params['vrid']){
-            $query .= " WHERE v.value_resource_id = ? AND r.resource_type IN (";
+            $query .= $where." AND v.value_resource_id = ? AND r.resource_type IN (";
             $query .= implode(',', array_fill(0, count($resourceTypes), '?'));
             $query .= ")  GROUP BY r.id";
             $rs = $this->conn->fetchAll($query,array_merge([$params["vrid"]], $resourceTypes));
         }else{
             ini_set('memory_limit', '2048M');
-            $query .= " WHERE r.resource_type IN (?,?,?,?)  
+            $query .= $where." AND r.resource_type IN (?,?,?,?)  
                 GROUP BY r.id ";
             $rs = $this->conn->fetchAll($query,$resourceTypes);
         }
