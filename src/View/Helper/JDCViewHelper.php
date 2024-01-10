@@ -680,17 +680,28 @@ class JDCViewHelper extends AbstractHelper
         $items = $this->api->search('items', ['item_set_id' => [$r['id']]],['limit' => 0])->getContent();        
         $cxItemSetCount = $this->cxCurCount;
         foreach ($items as $it) {
-          $ni = $this->getStatResUsedForId($it->id());
-          $db[$ni['id']]=isset($db[$ni['id']]) ? $db[$ni['id']]+1 : 1;
-          if($db[$ni['id']]<2){
-            //ajoute les rapports
-            //$this->incrementeRapport($n.'_'.($n).'_'.$d.'_'.$this->mapClassToDimension($ni).'_itemInSet',1);
-            $this->incrementeRapport($n.'_'.($n).'_Actant_'.$this->mapClassToDimension($ni).'_itemInSet',1);
-            //calcule la complexité de la ressource liés
-            $this->setComplexityResource($ni,$n,$db,false);
-            $cxItemSetCount=$this->cumulComplexity($this->cxCurCount,$cxItemSetCount);
+          //vérifie s'il faut recalculer la complexité de l'items
+          $itemCxCount = $this->getLastCxCount($it);
+          if(!$itemCxCount){
+            $ni = $this->getStatResUsedForId($it->id());
+            $db[$ni['id']]=isset($db[$ni['id']]) ? $db[$ni['id']]+1 : 1;
+            if($db[$ni['id']]<2){
+              //ajoute les rapports
+              //$this->incrementeRapport($n.'_'.($n).'_'.$d.'_'.$this->mapClassToDimension($ni).'_itemInSet',1);
+              $this->incrementeRapport($n.'_'.($n).'_Actant_'.$this->mapClassToDimension($ni).'_itemInSet',1);
+              //calcule la complexité de la ressource liés
+              $this->setComplexityResource($ni,$n,$db,false);
+              $cxItemSetCount=$this->cumulComplexity($this->cxCurCount,$cxItemSetCount);
+              ++$this->stats['processed'];  
+            }
+          }else{
+            $cxItemSetCount=$this->cumulComplexity($itemCxCount,$cxItemSetCount);
             ++$this->stats['processed'];  
-          }
+            $this->logger->notice(
+              'ressource cumulée = {processed} / {niv}: {id}.', // @translate
+              ['processed' => $this->stats['processed'], 'niv' => $n,'id' => $it->id()]
+            );  
+          } 
         }
         $this->cxCurCount = $cxItemSetCount;
         unset($cxItemSetCount);
@@ -713,6 +724,30 @@ class JDCViewHelper extends AbstractHelper
       ++$this->stats['totals'];  
       return $this->cxCount;
     }
+
+    function getLastCxCount($r){
+      $cx = [];
+      //récupère la dernière complexity de la ressource      
+      $values = $r->value('jdc:complexity', ['all' => true]);
+      if(!$values)return false;
+      $value = $values[count($values)-1];
+      $anno = $value->valueAnnotation();
+      if(!$anno)return false;            
+      $details = $anno->value('jdc:complexityDetails', ['all' => true]);
+      //la première ligne = la description => i commence à la deuxième ligne = 1
+      for ($i=1; $i < count($details)-1 ; $i++) { 
+        $data = $details[$i];
+        $d = explode(',',$data->__toString());
+        if(!isset($cx[$d[0]]))$cx[$d[0]]=[];
+        if($d[0]=='Rapport'){
+          $k = $d[1].'_'.$d[2].'_'.$d[3].'_'.$d[4].'_'.$d[5];
+          $cx[$d[0]][$k]=$d[6];
+        }else
+          $cx[$d[0]][$d[1]]=$d[6];
+      }
+      return $cx;
+    }
+
     function getStatResUsedForId($id){
       if($this->keys){
         $k = array_search($id, $this->keys);
