@@ -179,7 +179,7 @@ abstract class AbstractComplexityWriter extends AbstractWriter
     protected function appendResources(): self
     {
         $vhm = $this->getServiceLocator()->get('ViewHelperManager');
-        $this->querySQL = $vhm->get('QuerySqlFactory');
+        $this->querySQL = $vhm->get('JDCSqlFactory');
         $this->jdc = $vhm->get('JDCFactory');
 
         $this->stats['totals'] = 0;
@@ -193,7 +193,7 @@ abstract class AbstractComplexityWriter extends AbstractWriter
             return $this;
         }
 
-        $this->rs = $this->jdc->initRs();
+        $this->rs = $this->jdc->initRs($this->jdc->cxCount);
 
         foreach ($this->options['resource_types'] as $resourceType) {
             if ($this->jobIsStopped) {
@@ -276,10 +276,10 @@ abstract class AbstractComplexityWriter extends AbstractWriter
             }
             //calcule la complexité de la ressource
             $this->jdc->setStats($this->stats);
-            $this->jdc->setRs($this->rs);
+            $this->jdc->setCxCount($this->rs);
             $this->jdc->setComplexityResource($r,1);
             $this->stats=$this->jdc->getStats();
-            $this->rs=$this->jdc->getRs();
+            $this->rs=$this->jdc->getCxCount();
 
             ++$this->stats['processed'];  
             $this->logger->info(
@@ -386,10 +386,10 @@ abstract class AbstractComplexityWriter extends AbstractWriter
 
                     //calcule la complexité de la ressource
                     $this->jdc->setStats($this->stats);
-                    $this->jdc->setRs($this->rs);
+                    $this->jdc->setCxCount($this->rs);
                     $this->jdc->setComplexityResource($d,1);
                     $this->stats=$this->jdc->getStats();
-                    $this->rs=$this->jdc->getRs();
+                    $this->rs=$this->jdc->getCxCount();
         
                     ++$this->stats['processed'];  
                     $this->logger->info(

@@ -304,64 +304,60 @@ class JDCSqlViewHelper extends AbstractHelper
         //ATTENTION: on exclue les propriétés de complexité pour éviter d'augmenter la complexité à chaque calcul cf. $this.complexityUpdateValue
         $oP =  $this->getProp('jdc:complexity');
         $query ="SELECT 
-                r.id,
-                COUNT(v.id) nbVal,
-                COUNT(v.property_id) nbProp,
-                COUNT(DISTINCT r.owner_id) nbOwner,
-                GROUP_CONCAT(DISTINCT r.owner_id) idsOwner,
-                COUNT(v.uri) nbUri,
-                GROUP_CONCAT(v.uri) uris,
-                COUNT(v.value_resource_id) nbRes,
-                GROUP_CONCAT(v.value_resource_id) idsRes,
-                GROUP_CONCAT(CONCAT(vo.prefix, ':', p.local_name)) propsRes,
-                COUNT(v.value_annotation_id) nbAno,
-                COUNT(DISTINCT m.id) nbMedia,
-                GROUP_CONCAT(DISTINCT m.id) idsMedia,
-                r.resource_type,
-                rc.label 'class label',
-                rc.id 'idClass'
-            FROM
-                value v
-                    INNER JOIN
-                resource r ON r.id = v.resource_id
-                    LEFT JOIN
-                media m ON m.item_id = r.id
-                    LEFT JOIN
-                resource_class rc ON rc.id = r.resource_class_id
-                    LEFT JOIN
-                value vl ON vl.resource_id = v.resource_id
-                    AND vl.value_resource_id = v.value_resource_id
-                    LEFT JOIN
-                property p ON p.id = vl.property_id
-                    LEFT JOIN
-                vocabulary vo ON vo.id = p.vocabulary_id
-                ";
+            r.id,
+            COUNT(DISTINCT v.id) nbVal,
+            COUNT(DISTINCT v.property_id) nbProp,
+            COUNT(DISTINCT r.owner_id) nbOwner,
+            GROUP_CONCAT(DISTINCT r.owner_id) idsOwner,
+            COUNT(v.uri) nbUri,
+            GROUP_CONCAT(v.uri) uris,
+            COUNT(v.value_resource_id) nbRes,
+            GROUP_CONCAT(v.value_resource_id) idsRes,
+            GROUP_CONCAT(CONCAT(vo.prefix, ':', p.local_name)) propsRes,
+            COUNT(p.local_name) nbResProp,
+            r.resource_type,
+            rc.label 'class label',
+            rc.id 'idClass'
+        FROM
+            value v
+                INNER JOIN
+            resource r ON r.id = v.resource_id 
+                LEFT JOIN
+            resource_class rc ON rc.id = r.resource_class_id
+                LEFT JOIN
+            value vl ON vl.resource_id = v.resource_id
+                AND vl.value_resource_id = v.value_resource_id
+                LEFT JOIN
+            property p ON p.id = vl.property_id
+                LEFT JOIN
+            vocabulary vo ON vo.id = p.vocabulary_id";
         $where = " WHERE v.property_id != ".$oP->id();
         if($params["id"]){
-            $query .= $where." AND r.id = ?";
+            $query .= $where." AND r.id = ? ORDER BY r.id ";
             $rs = $this->conn->fetchAll($query,[$params["id"]]);
         }elseif ($params["ids"]) {
             $query .= $where." AND r.id IN (";
             $query .= implode(',', array_fill(0, count($params['ids']), '?'));
             $query .= ")   
-                GROUP BY r.id ";
+                GROUP BY r.id ORDER BY r.id ";
             $rs = $this->conn->fetchAll($query,$params["ids"]);
         }elseif ($params['resource_types']){
             ini_set('memory_limit', '2048M');
             $query .= $where." AND r.resource_type IN (";
             $query .= implode(',', array_fill(0, count($params['resource_types']), '?'));
-            $query .= ")  
-                GROUP BY r.id ";
+            $query .= ") ";
+            if($params["reprise"])$query .= " AND r.id > ".$params["reprise"];
+            $query .= " GROUP BY r.id ORDER BY r.id ";
             $rs = $this->conn->fetchAll($query,$params['resource_types']);
         }elseif($params['vrid']){
             $query .= $where." AND v.value_resource_id = ? AND r.resource_type IN (";
             $query .= implode(',', array_fill(0, count($resourceTypes), '?'));
-            $query .= ")  GROUP BY r.id";
+            $query .= ")  GROUP BY r.id ORDER BY r.id ";
             $rs = $this->conn->fetchAll($query,array_merge([$params["vrid"]], $resourceTypes));
         }else{
             ini_set('memory_limit', '2048M');
             $query .= $where." AND r.resource_type IN (?,?,?,?)  
-                GROUP BY r.id ";
+                GROUP BY r.id ORDER BY r.id ";
             $rs = $this->conn->fetchAll($query,$resourceTypes);
         }
         //$this->conn->close();
