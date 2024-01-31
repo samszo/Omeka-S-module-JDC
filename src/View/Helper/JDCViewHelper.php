@@ -708,7 +708,6 @@ class JDCViewHelper extends AbstractHelper
         unset($items);
       }
             
-
       //pour eviter un calcule trop long on ne compte que les niveaux 1
       if($n==1){
         $cx = $this->setComplexity($this->cxCurCount);
