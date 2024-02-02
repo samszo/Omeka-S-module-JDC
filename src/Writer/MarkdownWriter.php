@@ -2,9 +2,9 @@
 
 namespace BulkExport\Writer;
 
-use BulkExport\Form\Writer\FieldsJsonWriterConfigForm;
+use BulkExport\Form\Writer\FieldsTextWriterConfigForm;
 
-class ComplexityWriter extends AbstractComplexityWriter
+class MarkdownWriter extends AbstractMarkdownWriter
 {
     protected $label = 'Text'; // @translate
     protected $extension = '.md';

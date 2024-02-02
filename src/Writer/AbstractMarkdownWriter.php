@@ -7,7 +7,7 @@ use BulkExport\Traits\MetadataToStringTrait;
 use BulkExport\Traits\ResourceFieldsTrait;
 use Omeka\Api\Representation\AbstractResourceEntityRepresentation;
 
-abstract class AbstractComplexityWriter extends AbstractWriter
+abstract class AbstractMarkdownWriter extends AbstractWriter
 {
     use ListTermsTrait;
     use MetadataToStringTrait;
