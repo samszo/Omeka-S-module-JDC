@@ -179,9 +179,6 @@ abstract class AbstractMarkdownWriter extends AbstractWriter
     protected function appendResources(): self
     {
         ini_set('memory_limit', '4G');
-        $vhm = $this->getServiceLocator()->get('ViewHelperManager');
-        $this->querySQL = $vhm->get('JDCSqlFactory');
-        $this->jdc = $vhm->get('JDCFactory');
 
         $this->stats['totals'] = 0;
         $this->stats['totalToProcess'] = $this->countResources();
@@ -193,8 +190,6 @@ abstract class AbstractMarkdownWriter extends AbstractWriter
             $this->logger->warn('No resource to export.'); // @translate
             return $this;
         }
-
-        $this->rs = $this->jdc->initRs($this->jdc->cxCount);
 
         foreach ($this->options['resource_types'] as $resourceType) {
             if ($this->jobIsStopped) {
@@ -356,60 +351,38 @@ abstract class AbstractMarkdownWriter extends AbstractWriter
 
         $response = $api
             // Some modules manage some arguments, so keep initialize.
-            ->search($apiResource, $this->options['query'], ['responseContent' => 'reference']);
+            ->search($apiResource, $this->options['query']);
 
         /** @var \Omeka\Api\Representation\AbstractResourceEntityRepresentation[] $resources */
-        $ids = $response->getContent();
-        if (!count($ids)) {
+        $items = $response->getContent();
+        if (!count($items)) {
             return $this;
         }
 
-        foreach ($ids as $r) {
-            $id = $r->id();
-            if ($id) {
-                //récupère les usages des resources
-                $this->data = $this->querySQL->__invoke([
-                    'id'=>$id,
-                    'action'=>'statResUsed']);
-
-                $this->stats['totals'] += count($this->data);
-                $this->logger->notice(
-                    'Starting export of {total}.', // @translate
-                    ['total' => $this->stats['totals']]
+        $this->stats['totals'] += count($items);
+        $this->logger->notice(
+            'Starting export of {total}.', // @translate
+            ['total' => $this->stats['totals']]
+        );
+        foreach ($items as $r) {
+            if ($this->job->shouldStop()) {
+                $this->jobIsStopped = true;
+                $this->logger->warn(
+                    'The job "Export" was stopped: {processed}/{total} resources processed.', // @translate
+                    ['processed' => $this->stats['processed'], 'total' => $this->stats['totals']]
                 );
-
-                foreach ($this->data as $i=>$d) {
-                    if ($this->job->shouldStop()) {
-                        $this->jobIsStopped = true;
-                        $this->logger->warn(
-                            'The job "Export" was stopped: {processed}/{total} resources processed.', // @translate
-                            ['processed' => $this->stats['processed'], 'total' => $this->stats['totals']]
-                        );
-                        break;
-                    }
-
-                    //calcule la complexité de la ressource
-                    $this->jdc->setStats($this->stats);
-                    $this->jdc->setCxCount($this->rs);
-                    $this->jdc->setComplexityResource($d,1);
-                    $this->stats=$this->jdc->getStats();
-                    $this->rs=$this->jdc->getCxCount();
-        
-                    ++$this->stats['processed'];  
-                    $this->logger->info(
-                        '{processed}/{total} => {totals} : {id}.', // @translate
-                        ['processed' => $this->stats['processed'], 'total' => $this->stats['totalToProcess'], 'totals' => $this->stats['totals'], 'id' => $d['id']]
-                    );
-            
-                }                    
-                // Avoid memory issue.
-                unset($r);
-
-                ++$statistics['succeed'];
-            } else {
-                ++$statistics['skipped'];
+                break;
             }
 
+            //ajoute la ressource et son niveau
+            $this->addResources($r,0);
+        
+            ++$this->stats['processed'];  
+            $this->logger->info(
+                '{processed}/{total} => {totals} : {id}.', // @translate
+                ['processed' => $this->stats['processed'], 'total' => $this->stats['totalToProcess'], 'totals' => $this->stats['totals'], 'id' => $d['id']]
+            );
+            
             // Processed = $offset + $key.
             ++$statistics['processed'];
         }
@@ -418,10 +391,6 @@ abstract class AbstractMarkdownWriter extends AbstractWriter
             '{processed}/{total} {resource_type} processed, {succeed} succeed, {skipped} skipped.', // @translate
             ['resource_type' => $resourceText, 'processed' => $statistics['processed'], 'total' => $statistics['total'], 'succeed' => $statistics['succeed'], 'skipped' => $statistics['skipped']]
         );
-
-        // Avoid memory issue.
-        unset($ids);
-        $entityManager->clear();
 
         $this->logger->notice(
             '{processed}/{total} {resource_type} processed, {succeed} succeed, {skipped} skipped.', // @translate
@@ -434,6 +403,22 @@ abstract class AbstractMarkdownWriter extends AbstractWriter
         );
 
         return $this;
+    }
+
+    protected function addResources($r,$n): array
+    {
+        $d = json_decode(json_encode($r), true);
+        $d['niveau']=$n;
+        $d['linksR']=[];
+        $this->rs[]=$d;
+        $reverses = $r->subjectValuesForReverse();
+        foreach ($reverses as $k=>$rv) {
+            if(!isset($d['linksR'][$k]))
+            $this->addResources($rv,$n+1);
+        }
+        // Avoid memory issue.
+        unset($r);
+        return $d;
     }
 
     protected function countResources(): array

@@ -2,11 +2,12 @@
 
 namespace BulkExport\Writer;
 
-use BulkExport\Form\Writer\FieldsTextWriterConfigForm;
+use BulkExport\Form\Writer\TextWriterConfigForm;
+
 
 class MarkdownWriter extends AbstractMarkdownWriter
 {
-    protected $label = 'Text'; // @translate
+    protected $label = 'Markdown'; // @translate
     protected $extension = '.md';
     protected $mediaType = 'text/markdown';
     protected $configFormClass = TextWriterConfigForm::class;
