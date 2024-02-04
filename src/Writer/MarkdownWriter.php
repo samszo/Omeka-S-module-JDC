@@ -64,24 +64,54 @@ class MarkdownWriter extends AbstractMarkdownWriter
         return $this;
     }
 
-    protected function writeFields(array $fields): self
+    protected function writeFields(array $rs): self
     {
-        foreach ($fields as $fieldName => $fieldValues) {
-            if (!is_array($fieldValues)) {
-                $fieldValues = [$fieldValues];
-            }
-            if ($this->options['format_fields'] === 'label') {
-                $fieldName = $this->getFieldLabel($fieldName);
-            }
-            fwrite($this->handle, $fieldName . "\n");
-            foreach ($fieldValues as $fieldValue) {
-                fwrite($this->handle, "\t" . $fieldValue . "\n");
-            }
+        foreach ($rs['items'] as $item) {
+            $this->wItem($item);            
         }
-        fwrite($this->handle, "\n--\n\n");
+        fwrite($this->handle, "\n");
         return $this;
     }
 
+    protected function wItem($item): void
+    {
+        $this->wTitre($item);
+        foreach ($item['linksR'] as $k => $linksR) {
+            $this->wCallout('tip',$k);
+            foreach ($linksR as $v) {
+                $this->wItem($v);
+            }
+            /*
+            switch ($k) {
+                case "dcterms:isPartOf":
+                    # code...
+                    break;                
+                default:
+                    # code...
+                    break;
+            }
+            */
+        }
+    }
+
+    protected function wCallout($type,$title,$desc=""): void
+    {
+        //écrire un callout cf. https://quarto.org/docs/authoring/callouts.html
+        $s = "::: {.callout-$type}\n"
+            ."## $title\n"
+            ."$desc\n"
+            .":::\n";
+        fwrite($this->handle, $s);
+
+    }
+
+    protected function wTitre($item): void
+    {
+        $s = str_pad("", $item['niveau']+1, "#", STR_PAD_LEFT)." ".$item['o:title']." {#sec-item".$item['o:id']."}\n";
+        fwrite($this->handle, $s);
+    }
+
+    
     protected function finalizeOutput(): self
     {
         if (!$this->handle) {

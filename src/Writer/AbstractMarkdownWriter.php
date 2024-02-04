@@ -112,6 +112,7 @@ abstract class AbstractMarkdownWriter extends AbstractWriter
     protected $data = [];
     protected $querySQL;
     protected $jdc;
+    protected $api;
 
     /**
      * @var \Laminas\Mvc\I18n\Translator
@@ -211,7 +212,7 @@ abstract class AbstractMarkdownWriter extends AbstractWriter
             '{processed}/{total} processed, {succeed} succeed, {skipped} skipped.', // @translate
             ['processed' => $this->stats['processed'], 'total' => $this->stats['totals'], 'succeed' => $this->stats['succeed'], 'skipped' => $this->stats['skipped']]
         );
-        $this->writeFields($this->jdc->getCxCount());
+        $this->writeFields($this->rs);
 
         return $this;
     }
@@ -320,7 +321,7 @@ abstract class AbstractMarkdownWriter extends AbstractWriter
         $services = $this->getServiceLocator();
         $entityManager = $services->get('Omeka\EntityManager');
         $adapter = $services->get('Omeka\ApiAdapterManager')->get($apiResource);
-        $api = $services->get('Omeka\ApiManager');
+        $this->api = $services->get('Omeka\ApiManager');
 
         $this->stats['process'][$resourceType] = [];
         $this->stats['process'][$resourceType]['total'] = $this->stats['totals'][$resourceType];
@@ -349,7 +350,7 @@ abstract class AbstractMarkdownWriter extends AbstractWriter
             return $this;
         }
 
-        $response = $api
+        $response = $this->api
             // Some modules manage some arguments, so keep initialize.
             ->search($apiResource, $this->options['query']);
 
@@ -364,6 +365,7 @@ abstract class AbstractMarkdownWriter extends AbstractWriter
             'Starting export of {total}.', // @translate
             ['total' => $this->stats['totals']]
         );
+        $this->rs['items']=[];
         foreach ($items as $r) {
             if ($this->job->shouldStop()) {
                 $this->jobIsStopped = true;
@@ -410,14 +412,25 @@ abstract class AbstractMarkdownWriter extends AbstractWriter
         $d = json_decode(json_encode($r), true);
         $d['niveau']=$n;
         $d['linksR']=[];
-        $this->rs[]=$d;
         $reverses = $r->subjectValuesForReverse();
         foreach ($reverses as $k=>$rv) {
-            if(!isset($d['linksR'][$k]))
-            $this->addResources($rv,$n+1);
+            if(!isset($d['linksR'][$k]))$d['linksR'][$k]=[];
+            foreach ($rv as $v) {
+                $url = explode("/",$v['@id']);
+                $vItem = $this->api->read('items', end($url))->getContent();
+                $d['linksR'][$k][]=$this->addResources($vItem,$n+1);
+                unset($vItem);
+            }
         }
+        ++$this->stats['processed'];  
+        $this->logger->info(
+            '{niveau} {processed} => {id}.', // @translate
+            ['niveau' => $n, 'processed' => $this->stats['processed'], 'id' => $r->id()]
+        );
         // Avoid memory issue.
         unset($r);
+        if($n==0)$this->rs['items'][]=$d;
+
         return $d;
     }
 
