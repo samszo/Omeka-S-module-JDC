@@ -8,7 +8,7 @@ use BulkExport\Form\Writer\TextWriterConfigForm;
 class MarkdownWriter extends AbstractMarkdownWriter
 {
     protected $label = 'Markdown'; // @translate
-    protected $extension = '.md';
+    protected $extension = 'md';
     protected $mediaType = 'text/markdown';
     protected $configFormClass = TextWriterConfigForm::class;
     protected $paramsFormClass = TextWriterConfigForm::class;
@@ -64,8 +64,20 @@ class MarkdownWriter extends AbstractMarkdownWriter
         return $this;
     }
 
+    protected function sortFields(array $a, array $b, array $fields)
+    {
+        $va="";
+        $vb="";
+        foreach ($fields as $f) {
+            $va = !$va && $a[$f] ? $a[$f][0]['@value'] : ""; 
+            $vb = !$vb && $b[$f] ? $b[$f][0]['@value'] : ""; 
+        }
+        return strcmp($va, $vb);        
+    }
+
     protected function writeFields(array $rs): self
     {
+        usort($rs['items'], fn($a, $b) => $this->sortFields($a, $b,['schema:orderNumber','schema:startDate']));
         foreach ($rs['items'] as $item) {
             $this->wItem($item);            
         }
@@ -76,8 +88,11 @@ class MarkdownWriter extends AbstractMarkdownWriter
     protected function wItem($item): void
     {
         $this->wTitre($item);
+        $this->wProps($item,['schema:startDate','schema:endDate'],[0=>'Période de','0_0'=>'',1=>'à','1_0'=>'']);
+        $this->wProps($item,['dcterms:description']);
         foreach ($item['linksR'] as $k => $linksR) {
             $this->wCallout('tip',$k);
+            usort($linksR, fn($a, $b) => $this->sortFields($a, $b,['schema:orderNumber','schema:startDate']));
             foreach ($linksR as $v) {
                 $this->wItem($v);
             }
@@ -92,6 +107,8 @@ class MarkdownWriter extends AbstractMarkdownWriter
             }
             */
         }
+        fwrite($this->handle, "\n");
+
     }
 
     protected function wCallout($type,$title,$desc=""): void
@@ -104,11 +121,29 @@ class MarkdownWriter extends AbstractMarkdownWriter
         fwrite($this->handle, $s);
 
     }
-
+    
     protected function wTitre($item): void
     {
-        $s = str_pad("", $item['niveau']+1, "#", STR_PAD_LEFT)." ".$item['o:title']." {#sec-item".$item['o:id']."}\n";
+        $class = str_replace(':','-',implode("_",$item['@type']));
+        $s = str_pad("", $item['niveau']+1, "#", STR_PAD_LEFT)." ".$item['o:title']." {#sec-item".$item['o:id']." .".$class."}\n";
         fwrite($this->handle, $s);
+    }
+
+    protected function wProps($item,$props,$sCrible=[]): void
+    {
+        $s = "";
+        foreach ($props as $i=>$p) {
+            if($item[$p]){
+                foreach ($item[$p] as $j=>$v) {
+                    if($v['type']!='resource'){
+                        if($sCrible)$sCrible[$i.'_'.$j]=$v['@value'];
+                        $s .= $v['@value']." ";
+                    }
+                }    
+            }
+        }
+        if($sCrible && $s)$s = implode(" ",$sCrible);
+        if($s)fwrite($this->handle, $s."\n");            
     }
 
     
