@@ -113,6 +113,7 @@ abstract class AbstractMarkdownWriter extends AbstractWriter
     protected $querySQL;
     protected $jdc;
     protected $api;
+    protected $sites = [];
 
     /**
      * @var \Laminas\Mvc\I18n\Translator
@@ -412,6 +413,11 @@ abstract class AbstractMarkdownWriter extends AbstractWriter
         $d = json_decode(json_encode($r), true);
         $d['niveau']=$n;
         $d['linksR']=[];
+        $d['linksIn']=['api'=>$d['@id'],'admin'=>$r->adminUrl(null,true)];
+        $sites = $r->sites();
+        foreach ($sites as $s) {
+            $d['linksIn'][$s->title()]=$r->siteUrl($s->slug(), true);
+        }
         $reverses = $r->subjectValuesForReverse();
         foreach ($reverses as $k=>$rv) {
             if(!isset($d['linksR'][$k]))$d['linksR'][$k]=[];
