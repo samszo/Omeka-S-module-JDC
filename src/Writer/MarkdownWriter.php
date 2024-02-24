@@ -120,7 +120,7 @@ class MarkdownWriter extends AbstractMarkdownWriter
         $titre = $item['schema:startDate'] ? 
             $this->wProps($item,['schema:startDate','schema:endDate'],['0_0'=>'',1=>' - ','1_0'=>''],false)." ***".$item['o:title']."***" 
             : $item['o:title'];
-        $num = $item['niveau'] > 2 || $date!="" ? " .unnumbered" : "";
+        $num = $item['niveau'] > 2 || $item['schema:startDate'] ? " .unnumbered" : "";
         $s = str_pad("", $item['niveau']+1, "#", STR_PAD_LEFT)." ".
             $titre
             ." {#sec-item".$item['o:id']
@@ -220,7 +220,7 @@ class MarkdownWriter extends AbstractMarkdownWriter
                             }    
                             break;                        
                         case 'uri':
-                                $s .= $this->wLink($v['@value'],$v['@value'])." ";
+                                $s .= $this->wLink($v['@id'],$v['@id'])." ";
                             break;                        
                         default:
                             if($sCrible)$sCrible[$i.'_'.$j]=$v['@value'];
