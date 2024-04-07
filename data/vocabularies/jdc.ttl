@@ -206,5 +206,21 @@ jdc:complexityTotals a rdf:Property ;
 jdc:existentialComplexity a rdfs:Class ;
     rdfs:label "Complexité exitentielle" ;
     rdfs:domain o:Resource ;
-    owl:sameAs skos:Concept;
     vs:term_status "experimental" .
+jdc:hasRencontre a rdf:Property ;
+    rdfs:label "A Rencontré" ;
+    rdfs:domain o:Resource ;
+    vs:term_status "experimental" .
+jdc:valeurBeaute a rdf:Property ;
+    rdfs:label "Valeur beauté" ;
+    rdfs:domain o:Resource ;
+    vs:term_status "experimental" .
+jdc:valeurVerite a rdf:Property ;
+    rdfs:label "Valeur vérité" ;
+    rdfs:domain o:Resource ;
+    vs:term_status "experimental" .
+jdc:valeurUtilite a rdf:Property ;
+    rdfs:label "Valeur utilité" ;
+    rdfs:domain o:Resource ;
+    vs:term_status "experimental" .
+

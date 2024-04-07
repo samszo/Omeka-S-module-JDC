@@ -182,12 +182,15 @@ class MarkdownWriter extends AbstractMarkdownWriter
                 case 'dcterms:isPartOf':
                 case 'dcterms:isChapterOf':
                 case 'dcterms:type':
+                case 'dcterms:identifier':
                 case 'schema:startDate':
                 case 'schema:endDate':
                 case 'schema:orderNumber':
                 case 'schema:size': 
                 case 'schema:contentSize':                               
-                case 'schema:upvoteCount': 
+                case 'schema:upvoteCount':
+                case 'schema:serviceUrl': 
+                case 'schema:provider':    
                 case 'ma:hasContributedTo':
                 case 'ma:isChapterOf':                               
                 case 'jdc:complexity':
@@ -220,7 +223,7 @@ class MarkdownWriter extends AbstractMarkdownWriter
                             }    
                             break;                        
                         case 'uri':
-                                $s .= $this->wLink($v['@id'],$v['@id'])." ";
+                                $s .= $this->wLink($v['@id'],$v['@id'],false)." ";
                             break;                        
                         default:
                             if($sCrible)$sCrible[$i.'_'.$j]=$v['@value'];

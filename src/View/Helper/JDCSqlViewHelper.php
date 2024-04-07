@@ -1,7 +1,10 @@
 <?php
 namespace JDC\View\Helper;
 
+require_once OMEKA_PATH . '/modules/JDC/vendor/autoload.php';
+
 use Laminas\View\Helper\AbstractHelper;
+use Symfony\Component\Cache\Adapter\FilesystemAdapter;
 
 class JDCSqlViewHelper extends AbstractHelper
 {
@@ -12,7 +15,8 @@ class JDCSqlViewHelper extends AbstractHelper
     public function __construct($api, $conn)
     {
       $this->api = $api;
-      $this->conn = $conn;
+      $this->conn = $conn;    
+
     }
 
     /**
@@ -23,7 +27,14 @@ class JDCSqlViewHelper extends AbstractHelper
      */
     public function __invoke($params=[],$props=[])
     {
-        if($params==[])return[];
+        /*TODO faire fonctionner le cache
+        try {
+            $cachePool = new FilesystemAdapter();  
+        } catch (\Throwable $th) {
+            throw $th;
+        }
+        */
+        if($params==[])return[];        
         if($props!=[])$this->props = $props;
         switch ($params['action']) {
             case 'statClassUsed':
@@ -101,18 +112,22 @@ class JDCSqlViewHelper extends AbstractHelper
         GROUP_CONCAT(DISTINCT vCT.rt) rt
         FROM (
         SELECT 
-            CAST(SUBSTRING_INDEX(va.value, ',', -1) AS INTEGER) cpx,
+            CAST(SUBSTRING_INDEX(va.value, ',', -1) AS SIGNED INTEGER) cpx,
             SUBSTRING_INDEX(va.value, ',', 1) dim,
             r.resource_type rt
         FROM value va
             INNER JOIN value v on v.value_annotation_id = va.resource_id
             INNER JOIN resource r on r.id = v.resource_id
         WHERE
-            va.property_id = ".$p->id()." 
+            va.property_id = ".$p->id();
+        if($params['dim'])$query .= " AND SUBSTRING_INDEX(va.value, ',', 1) = '".$params['dim']."' "; 
+        if($params['rt'])$query .= " AND r.resource_type = ?"; 
+        $query .=" 
         ) vCT
         GROUP BY vCT.dim, vCT.cpx
         ORDER BY vCT.cpx DESC";
-        $rs = $this->conn->fetchAll($query);
+        if($params['rt'])$rs = $this->conn->fetchAll($query,[$params['rt']]); 
+        else $rs = $this->conn->fetchAll($query);
         return $rs;       
     }
 
