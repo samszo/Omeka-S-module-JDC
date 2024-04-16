@@ -2,6 +2,10 @@
 namespace JDC\View\Helper;
 
 use Laminas\View\Helper\AbstractHelper;
+use DateTime;
+use DateTimeImmutable;
+use DateInterval;
+use DatePeriod;
 
 class JDCViewHelper extends AbstractHelper
 {
@@ -33,6 +37,8 @@ class JDCViewHelper extends AbstractHelper
     var $data;
     var $keys;
     var $stats;
+    var $actZero;
+    var $actNew;
     //liste précisant pour chaque propriétés utilisées avec comme valeur une ressource 
     //les niveaux autorisés pour l'algorithme de maillage du réseau
     //pour la liste des propriétés cf. /s/cartoaffect/page/ajax?json=1&helper=JDCSql&action=propValueResource
@@ -65,6 +71,16 @@ class JDCViewHelper extends AbstractHelper
       "fup8:hasUFR"=>['in'=>0,'out'=>0],
       "fup8:hasMention"=>['in'=>0,'out'=>0]      
     ];
+    var $streamActantProperties = ['dcterms:creator','dcterms:contributor',
+      'bibo:editor','bibo:director','bibo:contributorList','bibo:performer','bibo:translator',
+      'cito:isCompiledBy','schema:participant'];
+    var $streamClass = ["schema:Project",
+      "bibo:AcademicArticle","bibo:Article","bibo:Book","bibo:BookSection","bibo:Thesis"
+    ];
+    var $streamConceptProperties = ['schema:programmingLanguage',
+      'skos:semanticRelation'];
+    var $streamDateProperties = ['dcterms:date','dcterms:dateSubmitted',
+      'schema:startDate','schema:endDate'];
 
     public function __construct($services)
     {
@@ -171,6 +187,9 @@ class JDCViewHelper extends AbstractHelper
         case 'getMaillageResource':
           $rs = $this->getMaillageResource($data['params']['id']);
           break;
+        case 'getStream':
+          $rs = $this->getStream($data);
+          break;
         default:
           $rs = [];
           break;
@@ -204,6 +223,269 @@ class JDCViewHelper extends AbstractHelper
           "resources"=>[]
         ];
         return $rs;
+    }
+
+    /** calcule le stream d'une ressource 
+     *
+     * @param array   $params
+     * @param array   $db
+     * @return array
+     */
+    function getStream($params,$db=[]){
+      $this->logger->info("stream START");
+      if(!$db){
+        set_time_limit(3600);
+      }
+      $this->data = ['docs'=>[],'actants'=>[],'concepts'=>[],'rapports'=>[]];
+      $this->doublons = [];
+      $this->actNew = [];
+      //récupère les stream des actants
+      $this->actZero = $this->api->read('items', $params["params"]["id"])->getContent();
+      if($this->actZero){
+        $this->getStreamActant($this->actZero);
+        //récupère les stream par class
+        foreach ($this->streamClass as $class) {
+          $this->getStreamClass($class);
+        }
+      }      
+      $this->logger->info("stream END");
+      return $this->data;
+    }
+
+
+    /** calcule le stream d'une class 
+     *
+     * @param string    $class
+     * @param integer   $niv
+     * 
+     */
+    function getStreamClass($class, $niv=1){
+      $items=$this->api->search('items',['resource_class_term'=>$class])->getContent();
+      foreach ($items as $doc) {
+        //$this->setStreamDoc($doc,$niv);
+        foreach ($this->streamActantProperties as $pAct) {
+          $p = $this->getProp($pAct);  
+          $vals = $doc->value($p->term(),['all'=>true]);
+          foreach ($vals as $vp) {
+            $act = $vp->valueResource();
+            $this->getStreamActant($act, $niv);
+          }
+        }
+      }
+    }  
+
+    /** calcule le stream d'une resource actant
+     *
+     * @param o:resource  $r
+     * @param integer     $niv
+     * 
+     */
+    function getStreamActant($r, $niv=0){
+      if($this->doublons[$r->id()])return false;
+
+      $pEnf = $this->getProp('dcterms:isPartOf');  
+      $relations = $r->subjectValues();
+      foreach ($relations as $rela) {
+          foreach ($rela as $v) {
+            $p = $v['val']->property();
+            if (in_array($p->term(), $this->streamActantProperties)){
+                $doc = $v['val']->resource();
+                $d = $this->setStreamDoc($doc,$niv); 
+                //ajoute les actants et les rapports
+                if($d){
+                  $actants = $this->setStreamActant($d,$p,$doc,$niv);
+                  //ajoute les parties du doc avec une date pour chaque actant
+                  //pour avoir les notes des références biblio
+                  $part = $d['dates'] ? [$d,$doc] : $this->findParentWithDate($doc,$pEnf,0);                   
+                  if($part) {
+                    foreach ($actants as $act) {
+                      /*ajoute les rapports entre 
+                        - la partie du document
+                        - l'actant du document
+                        */
+                      $this->setStreamRapport($part[0],$part[1],$act,$p,$niv+1);                 
+                    }
+                  }
+                }
+            }
+          }
+      }
+      //ajoute le stream des actants nouveau
+      foreach ($this->actNew as $act) {
+        if($act->id()!=$r->id())$this->getStreamActant($act,$niv+1);                                         
+      }            
+    }    
+
+    function findParentWithDate($doc,$p,$niv){
+      $docPart = $doc->subjectValues(null,null,$p->id()); 
+      foreach ($docPart as $part) {
+        foreach ($part as $valPart) {   
+          $rPart = $valPart['val']->resource();
+          $dPart = $this->setStreamDoc($rPart,$niv+1);
+          if($dPart['date'])return [$dPart,$rPart];
+          elseif($niv<10)return $this->findParentWithDate($rPart,$p,$niv+1);
+          else return false; 
+        }
+      }         
+    }
+    function setStreamDoc($doc,$niv){
+      if(!$this->doublons[$doc->id()]){
+        if($doc->id()==301796){
+          $t=1;
+        }
+        //ajoute le doc
+        $d=[
+          'id'=>$doc->id(),
+          'dates'=>$this->getStreamDate($doc),
+          'title'=>$doc->displayTitle(),
+          'class'=>$doc->resourceClass()?$doc->resourceClass()->label():'no'
+        ];
+        if(!$d['dates'])return;
+        //ajoute la description pour les notes
+        if($d['class']=='Note')$d['text']=$this->getStreamText($doc);
+        
+        $this->doublons[$doc->id()]=1;
+        $this->data['docs'][]=$d;
+
+        //ajoute les concepts
+        $this->setStreamConcept($d, $doc, $niv);                      
+        return $d;                              
+      }else{
+        $this->doublons[$doc->id()]++;        
+        return false;
+      }       
+    }
+
+    function setStreamRapport($d,$doc,$act,$cpt,$niv){
+      //prise des différents type de date
+      if($doc->id()==70133){
+        $t = 1;
+      }
+      foreach ($d['dates'] as $k=>$date) {
+        if($k=='schema:startDate') {
+          $daterange = $this->getDateRange(
+            $date, 
+            $d['dates']['schema:endDate'] ? $d['dates']['schema:endDate'] : date("Y"), 
+            $period='1 year');                        
+          foreach($daterange as $dp){
+            $this->data['rapports'][]=[
+              'date'=>$dp->format('Y-m-d'),
+              'idDoc'=>$doc->id(),
+              'idAct'=>$act->id(),
+              'idCpt'=>$cpt->id(),
+              'typeDate'=>'period',
+              'niv'=>$niv
+            ];
+          }
+        }elseif ($k=='schema:endDate') {
+          $t = 'rien';
+        }else{         
+          if($this->validateDate($date,'Y'))$date.='-01-01';
+          $this->data['rapports'][]=[
+            'date'=> date('Y-m-d',strtotime($date)),
+            'idDoc'=>$doc->id(),
+            'idAct'=>$act->id(),
+            'idCpt'=>$cpt->id(),
+            'niv'=>$niv,
+            'typeDate'=>$k,
+          ];       
+        } 
+      }      
+    }
+
+    function setStreamActant($d,$p,$doc,$niv){
+      $actants = [];
+      if(!$this->doublons[$p->label()]){
+        $this->data['concepts'][]=[
+          'title'=>$p->label(),
+          'id'=>$p->id(),
+          'class'=>'property'
+        ];
+        $this->doublons[$p->label()]=1;
+      }
+      $vals = $doc->value($p->term(),['all'=>true]);
+      foreach ($vals as $vp) {
+        $act = $vp->valueResource();
+        $actants[]=$act;
+        //ajoute les rapports avec le document principal
+        $this->setStreamRapport($d,$doc,$act,$p,$niv);                 
+
+        if(!$this->doublons[$act->id()]){
+          $this->doublons[$act->id()]=1;
+          $this->actNew[]= $act;
+          $this->data['actants'][]=[
+            'id'=>$act->id(),
+            'title'=>$act->displayTitle(),
+            'class'=>$act->resourceClass()->label()
+          ];
+        }
+      }
+      return $actants;      
+    }
+
+    function getDateRange($start, $end, $period='1 year'){
+      if($this->validateDate($start,'Y'))$start.='-01-01';
+      if($this->validateDate($end,'Y'))$end.='-01-01';
+      $start_date = new DateTimeImmutable($start);
+      $end_date = new DateTimeImmutable($end);
+      $interval = DateInterval::createFromDateString($period);
+      return new DatePeriod($start_date, $interval ,$end_date);                          
+    }
+
+    function validateDate($date, $format = 'Y-m-d H:i:s')
+    {
+        $d = DateTime::createFromFormat($format, $date);
+        return $d && $d->format($format) == $date;
+    }
+
+    function setStreamConcept($d, $doc, $niv){
+        //ajoute les concepts
+        foreach ($this->streamConceptProperties as $p) {
+          $vals = $doc->value($p,['all'=>true]);
+          foreach ($vals as $vc) {
+            $cpt = $vc->valueResource();
+            if(!$this->doublons[$cpt->id()]){
+              $this->doublons[$cpt->id()]=1;
+              $this->data['concepts'][]=[
+                'id'=>$cpt->id(),
+                'title'=>$cpt->displayTitle(),
+                'class'=>$cpt->resourceClass()->label()
+              ];
+            }
+            $act = $doc->value('cito:isCompiledBy');
+            if($act){
+              $act = $act->valueResource();
+              if(!$this->doublons[$act->id()]){
+                //exclusion de Lucky Semiosis 
+                //$this->actNew[]= $act;
+                $this->doublons[$act->id()]=1;
+                $this->data['actants'][]=[
+                  'id'=>$act->id(),
+                  'title'=>$act->displayTitle(),
+                  'class'=>$act->resourceClass()->label()
+                ];
+              } 
+            }else $act = $this->actZero;
+            $this->setStreamRapport($d,$doc,$act,$cpt,$niv);          
+          }
+        }
+
+    }
+    function getStreamText($r){
+      $text = "";
+      if($r->value('dcterms:abstract'))
+        $text .= $r->value('dcterms:abstract')->__toString()." ";
+      if($r->value('dcterms:description'))
+        $text .= $r->value('dcterms:description')->__toString()." ";
+      return $text;
+    }
+    function getStreamDate($r){
+      $date = [];
+      foreach ($this->streamDateProperties as $p) {
+        if($r->value($p))
+          $date[$p] = $r->value($p)->__toString();
+      }
+      return $date;
     }
 
     /** calcule la complexité d'une ressource 
