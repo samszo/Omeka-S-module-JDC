@@ -210,12 +210,11 @@ abstract class AbstractComplexityWriter extends AbstractWriter
             $this->appendAllResources();
         }
 
-
         $this->logger->info(
             '{processed}/{total} processed, {succeed} succeed, {skipped} skipped.', // @translate
             ['processed' => $this->stats['processed'], 'total' => $this->stats['totals'], 'succeed' => $this->stats['succeed'], 'skipped' => $this->stats['skipped']]
         );
-        $this->writeFields($this->jdc->setComplexity());
+        $this->writeFields($this->jdc->setComplexity($this->rs));
 
         return $this;
     }

@@ -24,6 +24,7 @@ class JDCViewHelper extends AbstractHelper
     protected $auth;
     protected $user;
     var $doublons=[];
+    var $doublonsStream=[];
     var $maillage=[];
     var $nivMax=2;//profondeur de la recherche
     var $addResource=true;//ajoute ou non les ressources
@@ -35,6 +36,7 @@ class JDCViewHelper extends AbstractHelper
     var $cxCurCount;
     var $cxCount;
     var $data;
+    var $dataStream;
     var $keys;
     var $stats;
     var $actZero;
@@ -236,8 +238,8 @@ class JDCViewHelper extends AbstractHelper
       if(!$db){
         set_time_limit(3600);
       }
-      $this->data = ['docs'=>[],'actants'=>[],'concepts'=>[],'rapports'=>[]];
-      $this->doublons = [];
+      $this->dataStream = ['docs'=>[],'actants'=>[],'concepts'=>[],'rapports'=>[]];
+      $this->doublonsStream = [];
       $this->actNew = [];
       //récupère les stream des actants
       $this->actZero = $this->api->read('items', $params["params"]["id"])->getContent();
@@ -249,7 +251,7 @@ class JDCViewHelper extends AbstractHelper
         }
       }      
       $this->logger->info("stream END");
-      return $this->data;
+      return $this->dataStream;
     }
 
 
@@ -281,34 +283,37 @@ class JDCViewHelper extends AbstractHelper
      * 
      */
     function getStreamActant($r, $niv=0){
-      if($this->doublons[$r->id()])return false;
+      if($this->doublonsStream[$r->id()])return false;
 
-      $pEnf = $this->getProp('dcterms:isPartOf');  
       $relations = $r->subjectValues();
       foreach ($relations as $rela) {
-          foreach ($rela as $v) {
-            $p = $v['val']->property();
-            if (in_array($p->term(), $this->streamActantProperties)){
-                $doc = $v['val']->resource();
-                $d = $this->setStreamDoc($doc,$niv); 
-                //ajoute les actants et les rapports
-                if($d){
-                  $actants = $this->setStreamActant($d,$p,$doc,$niv);
-                  //ajoute les parties du doc avec une date pour chaque actant
-                  //pour avoir les notes des références biblio
-                  $part = $d['dates'] ? [$d,$doc] : $this->findParentWithDate($doc,$pEnf,0);                   
-                  if($part) {
-                    foreach ($actants as $act) {
-                      /*ajoute les rapports entre 
-                        - la partie du document
-                        - l'actant du document
-                        */
-                      $this->setStreamRapport($part[0],$part[1],$act,$p,$niv+1);                 
+        foreach ($rela as $v) {
+          $p = $v['val']->property();
+          if (in_array($p->term(), $this->streamActantProperties)){
+              $doc = $v['val']->resource();
+              $d = $this->setStreamDoc($doc,$niv); 
+              //ajoute les actants et les rapports
+              if($d){
+                $actants = $this->setStreamActant($d,$p,$doc,$niv);
+                //si aucune date récupère la date du parent 
+                $part = $d['dates'] ? [$d,$doc] : $this->findParentWithDate($doc,0);                   
+                if($part) {
+                  foreach ($actants as $act) {
+                    /*ajoute les rapports entre 
+                      - le document
+                      - l'actant du document
+                      */
+                    $this->setStreamRapport($part[0],$part[1],$act,$p,$niv+1);
+                    //ajoute les annotations
+                    $annos = $this->getStreamAnnotations($part[1],$niv+1);
+                    foreach ($annos as $a) {
+                      $this->setStreamRapport($a[0],$a[1],$act,$p,$niv+1);
                     }
                   }
                 }
-            }
+              }
           }
+        }
       }
       //ajoute le stream des actants nouveau
       foreach ($this->actNew as $act) {
@@ -316,21 +321,41 @@ class JDCViewHelper extends AbstractHelper
       }            
     }    
 
-    function findParentWithDate($doc,$p,$niv){
-      $docPart = $doc->subjectValues(null,null,$p->id()); 
-      foreach ($docPart as $part) {
-        foreach ($part as $valPart) {   
-          $rPart = $valPart['val']->resource();
+    function findParentWithDate($doc,$niv){
+      if($doc->id()==70133){
+        $t = 1;
+      }
+      $p = $this->getProp('dcterms:isPartOf');  
+      $vals = $doc->value($p->term(),['all'=>true]);      
+      foreach ($vals as $v) {
+          $rPart = $v->resource();
           $dPart = $this->setStreamDoc($rPart,$niv+1);
           if($dPart['date'])return [$dPart,$rPart];
           elseif($niv<10)return $this->findParentWithDate($rPart,$p,$niv+1);
           else return false; 
-        }
       }         
     }
+
+    function getStreamAnnotations($doc,$niv){
+      $docs  = [];
+      //ajoute les parties du doc de type annotations
+      $p = $this->getProp('dcterms:isPartOf');  
+      $docPart = $doc->subjectValues(null,null,$p->id()); 
+      foreach ($docPart as $part) {
+        foreach ($part as $valPart) {   
+          $rPart = $valPart['val']->resource();
+          if($rPart->resourceClass() && $rPart->resourceClass()->label()=='Note'){
+            $dPart = $this->setStreamDoc($rPart,$niv+1);
+            if($dPart)$docs[]=[$dPart,$rPart];
+          }
+        }
+      }         
+      return $docs;
+    }
+    
     function setStreamDoc($doc,$niv){
-      if(!$this->doublons[$doc->id()]){
-        if($doc->id()==301796){
+      if(!$this->doublonsStream[$doc->id()]){
+        if($doc->id()==67410){
           $t=1;
         }
         //ajoute le doc
@@ -342,17 +367,24 @@ class JDCViewHelper extends AbstractHelper
         ];
         if(!$d['dates'])return;
         //ajoute la description pour les notes
-        if($d['class']=='Note')$d['text']=$this->getStreamText($doc);
+        //si on veut calculer les mots-clefs
+        //if($d['class']=='Note')$d['text']=$this->getStreamText($doc);
+        //ajoute la complexité pour pondérer la fréquence
+        $cpx = $doc->value($this->getProp('jdc:complexity')->term());
+        if(!$cpx){
+          $cpx = $this->getComplexity(['params'=>['id'=>$d['id']]]);
+          $d['cpx'] = $cpx['totals']['c'];
+        }else $d['cpx']=$cpx->__toString();
+
         
-        $this->doublons[$doc->id()]=1;
-        $this->data['docs'][]=$d;
+        $this->doublonsStream[$doc->id()]=$d;
+        $this->dataStream['docs'][]=$d;
 
         //ajoute les concepts
         $this->setStreamConcept($d, $doc, $niv);                      
         return $d;                              
       }else{
-        $this->doublons[$doc->id()]++;        
-        return false;
+        return $this->doublonsStream[$doc->id()];
       }       
     }
 
@@ -368,7 +400,7 @@ class JDCViewHelper extends AbstractHelper
             $d['dates']['schema:endDate'] ? $d['dates']['schema:endDate'] : date("Y"), 
             $period='1 year');                        
           foreach($daterange as $dp){
-            $this->data['rapports'][]=[
+            $this->dataStream['rapports'][]=[
               'date'=>$dp->format('Y-m-d'),
               'idDoc'=>$doc->id(),
               'idAct'=>$act->id(),
@@ -381,7 +413,7 @@ class JDCViewHelper extends AbstractHelper
           $t = 'rien';
         }else{         
           if($this->validateDate($date,'Y'))$date.='-01-01';
-          $this->data['rapports'][]=[
+          $this->dataStream['rapports'][]=[
             'date'=> date('Y-m-d',strtotime($date)),
             'idDoc'=>$doc->id(),
             'idAct'=>$act->id(),
@@ -395,13 +427,13 @@ class JDCViewHelper extends AbstractHelper
 
     function setStreamActant($d,$p,$doc,$niv){
       $actants = [];
-      if(!$this->doublons[$p->label()]){
-        $this->data['concepts'][]=[
+      if(!$this->doublonsStream[$p->label()]){
+        $this->dataStream['concepts'][]=[
           'title'=>$p->label(),
           'id'=>$p->id(),
           'class'=>'property'
         ];
-        $this->doublons[$p->label()]=1;
+        $this->doublonsStream[$p->label()]=1;
       }
       $vals = $doc->value($p->term(),['all'=>true]);
       foreach ($vals as $vp) {
@@ -410,10 +442,10 @@ class JDCViewHelper extends AbstractHelper
         //ajoute les rapports avec le document principal
         $this->setStreamRapport($d,$doc,$act,$p,$niv);                 
 
-        if(!$this->doublons[$act->id()]){
-          $this->doublons[$act->id()]=1;
+        if(!$this->doublonsStream[$act->id()]){
+          $this->doublonsStream[$act->id()]=1;
           $this->actNew[]= $act;
-          $this->data['actants'][]=[
+          $this->dataStream['actants'][]=[
             'id'=>$act->id(),
             'title'=>$act->displayTitle(),
             'class'=>$act->resourceClass()->label()
@@ -444,9 +476,9 @@ class JDCViewHelper extends AbstractHelper
           $vals = $doc->value($p,['all'=>true]);
           foreach ($vals as $vc) {
             $cpt = $vc->valueResource();
-            if(!$this->doublons[$cpt->id()]){
-              $this->doublons[$cpt->id()]=1;
-              $this->data['concepts'][]=[
+            if(!$this->doublonsStream[$cpt->id()]){
+              $this->doublonsStream[$cpt->id()]=1;
+              $this->dataStream['concepts'][]=[
                 'id'=>$cpt->id(),
                 'title'=>$cpt->displayTitle(),
                 'class'=>$cpt->resourceClass()->label()
@@ -455,11 +487,11 @@ class JDCViewHelper extends AbstractHelper
             $act = $doc->value('cito:isCompiledBy');
             if($act){
               $act = $act->valueResource();
-              if(!$this->doublons[$act->id()]){
+              if(!$this->doublonsStream[$act->id()]){
                 //exclusion de Lucky Semiosis 
                 //$this->actNew[]= $act;
-                $this->doublons[$act->id()]=1;
-                $this->data['actants'][]=[
+                $this->doublonsStream[$act->id()]=1;
+                $this->dataStream['actants'][]=[
                   'id'=>$act->id(),
                   'title'=>$act->displayTitle(),
                   'class'=>$act->resourceClass()->label()
@@ -479,6 +511,7 @@ class JDCViewHelper extends AbstractHelper
         $text .= $r->value('dcterms:description')->__toString()." ";
       return $text;
     }
+
     function getStreamDate($r){
       $date = [];
       foreach ($this->streamDateProperties as $p) {
