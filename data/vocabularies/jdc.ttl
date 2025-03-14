@@ -16,6 +16,11 @@ jdc:SemanticPosition a rdfs:Class ;
     rdfs:domain o:Resource ;
     vs:term_status "experimental" .
 
+jdc:Pouvoir a rdfs:Class ;
+    rdfs:label "Pouvoir" ;
+    rdfs:domain o:Resource ;
+    vs:term_status "experimental" .
+
 jdc:Crible a rdfs:Class ;
     rdfs:label "Crible" ;
     rdfs:domain o:Resource ;
@@ -224,3 +229,17 @@ jdc:valeurUtilite a rdf:Property ;
     rdfs:domain o:Resource ;
     vs:term_status "experimental" .
 
+jdc:hasPouvoir a rdf:Property ;
+    rdfs:label "A comme pouvoir" ;
+    rdfs:domain o:Resource ;
+    vs:term_status "experimental" .
+
+jdc:intensite a rdf:Property ;
+    rdfs:label "Intensité" ;
+    rdfs:domain o:Resource ;
+    vs:term_status "experimental" .
+
+jdc:flux a rdf:Property ;
+    rdfs:label "Flux" ;
+    rdfs:domain o:Resource ;
+    vs:term_status "experimental" .
