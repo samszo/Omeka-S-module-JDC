@@ -224,6 +224,7 @@ jdc:valeurVerite a rdf:Property ;
     rdfs:label "Valeur vérité" ;
     rdfs:domain o:Resource ;
     vs:term_status "experimental" .
+
 jdc:valeurUtilite a rdf:Property ;
     rdfs:label "Valeur utilité" ;
     rdfs:domain o:Resource ;
@@ -241,5 +242,20 @@ jdc:intensite a rdf:Property ;
 
 jdc:flux a rdf:Property ;
     rdfs:label "Flux" ;
+    rdfs:domain o:Resource ;
+    vs:term_status "experimental" .
+
+jdc:raisonTrajective a rdfs:Class ;
+    rdfs:label "Raison trajective" ;
+    rdfs:domain o:Resource ;
+    vs:term_status "experimental" .
+
+jdc:pulsationExistentielle a rdfs:Class ;
+    rdfs:label "Pulsation existentielle" ;
+    rdfs:domain o:Resource ;
+    vs:term_status "experimental" .
+
+jdc:hasPulsationExistentielle a rdf:Property ;
+    rdfs:label "A comme pulsation existentielle" ;
     rdfs:domain o:Resource ;
     vs:term_status "experimental" .
